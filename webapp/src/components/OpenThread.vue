@@ -43,6 +43,7 @@ getAllMessages();
 
 const prompt = ref(null);
 const isLoading = ref(false);
+
 // sends a prompt and awaits the response
 async function handlePromptFallback() {
   isLoading.value = true;
@@ -163,20 +164,27 @@ watch([messages, currentMessage], () => {
 
 <template>
   <main id="thread-main">
+    <!-- The title of the thread -->
     <div id="title-area">
       <input type="text" v-model="threadTitle" @change="handleThreadChange" :style="{width: (title.length || 10) + 'ch'}">
     </div>
+
+    <!-- List of messages -->
     <ul id="thread" ref="threadList">
+      <!-- Prints all previous messages -->
       <li
         class="message"
-        :class="{'message-user': message.role === 'user'}"
-        v-for="(message, index) in messages"
+        :class="{'message-user': message.role === 'user'} /* If role = user add class message-user */ "
+        v-for="(message, index) in messages /* For loop to render each message */"
         :key="index"
-        v-html="md.render(message.content ?? '')"
+        v-html="md.render(message.content ?? '') /* render the message's content in markdown */ "
       ></li>
+      <!-- Prints the latest message -->
       <li v-if="currentMessage" class="message" v-html="md.render(currentMessage)">
       </li>
     </ul>
+
+    <!-- Prompt elements -->
     <form id="prompt" @submit.prevent="handlePrompt">
       <textarea type="text" name="send-message" v-model="prompt"></textarea>
       <button type="submit" :disabled="isLoading">Send</button>

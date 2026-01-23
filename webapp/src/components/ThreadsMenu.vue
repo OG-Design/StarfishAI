@@ -100,7 +100,7 @@ async function handleDeleteThreads() {
         <!-- If editmode is not active -->
         <template v-if="!editMode">
             <button @click="handleEditMode">...</button>
-            
+
             <!-- For each thread make button to open thread -->
             <li class="menu-child" v-for="(thr, index) in props.threadsAvailable" :key="index" >
                 <button @click="handleOpenThread(index) /* handles thread opening */ ">{{thr.title}}</button>
