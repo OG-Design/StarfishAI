@@ -1,0 +1,15 @@
+{
+    "webapp":{
+        "adress": "http://localhost",
+        "port": 5173
+    },
+    "api":{
+        "address": "http://localhost",
+        "port": 3000
+    },
+    "user": {
+        "register":{
+            "isRegisterable": true
+        }
+    }
+}
