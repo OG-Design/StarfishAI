@@ -173,14 +173,14 @@ watch([messages, currentMessage], () => {
     <ul id="thread" ref="threadList">
       <!-- Prints all previous messages -->
       <li
-        class="message"
+        class="message markdown-content"
         :class="{'message-user': message.role === 'user'} /* If role = user add class message-user */ "
         v-for="(message, index) in messages /* For loop to render each message */"
         :key="index"
         v-html="md.render(message.content ?? '') /* render the message's content in markdown */ "
       ></li>
       <!-- Prints the latest message -->
-      <li v-if="currentMessage" class="message" v-html="md.render(currentMessage)">
+      <li v-if="currentMessage" class="message markdown-content" v-html="md.render(currentMessage)">
       </li>
     </ul>
 
@@ -252,6 +252,150 @@ watch([messages, currentMessage], () => {
   width: fit-content;
   max-width: 70%;
   align-self: flex-end;
+}
+
+
+// Markdown styling
+.markdown-content {
+  color: #e8f4f8;
+  line-height: 1.6;
+
+  h1, h2, h3, h4, h5, h6 {
+    color: #6ec9f0;
+    font-weight: 700;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  h1 { font-size: 2em; }
+  h2 { font-size: 1.5em; }
+  h3 { font-size: 1.25em; }
+
+  strong, b {
+    font-weight: 700;
+    color: #8ed4f5;
+  }
+
+  em, i {
+    font-style: italic;
+    color: #b8e3f7;
+  }
+
+  code {
+    background-color: #1a2b3a;
+    color: #9bc4db;
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9em;
+  }
+
+  pre {
+    background-color: #0f1e2b;
+    border: 1px solid #2a4a5e;
+    border-radius: 6px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 1rem 0;
+
+    code {
+      background-color: transparent;
+      padding: 0;
+      color: #a8c8dc;
+    }
+  }
+
+  a {
+    color: #4fb3e8;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      color: #6ec9f0;
+      text-decoration: underline;
+    }
+  }
+
+  ul, ol {
+    margin: 0.5rem 0;
+    padding-left: 2rem;
+    color: #d4ebf5;
+
+    li {
+      margin: 0.25rem 0;
+      color: #c5e0f0;
+
+      &::marker {
+        color: #6ec9f0;
+      }
+    }
+
+    ul, ol {
+      margin: 0.25rem 0;
+
+      li::marker {
+        color: #5ab8e3;
+      }
+    }
+  }
+
+  blockquote {
+    border-left: 4px solid #4fb3e8;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: #b8e3f7;
+    font-style: italic;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0;
+    background-color: #1a3447;
+    border-radius: 6px;
+    overflow: hidden;
+
+    thead {
+      background-color: #2d5a7b;
+
+      th {
+        color: #6ec9f0;
+        font-weight: 700;
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 2px solid #4fb3e8;
+      }
+    }
+
+    tbody {
+      tr {
+        border-bottom: 1px solid #2d5a7b;
+
+        &:hover {
+          background-color: #223d52;
+        }
+
+        &:last-child {
+          border-bottom: none;
+        }
+      }
+
+      td {
+        padding: 0.75rem;
+        color: #d4ebf5;
+      }
+    }
+  }
+
+  hr {
+    border: none;
+    border-top: 2px solid #2d5a7b;
+    margin: 1.5rem 0;
+  }
+
+  p {
+    margin: 0.5rem 0;
+  }
 }
 </style>
 
