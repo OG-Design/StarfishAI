@@ -17,5 +17,6 @@ CREATE TABLE IF NOT EXISTS message (
   idMessage INTEGER NOT NULL PRIMARY KEY,
   data TEXT NOT NULL,
   idThread INTEGER NOT NULL,
+  isSystem INTEGER,
   FOREIGN KEY (idThread) REFERENCES thread(idThread) 
 );

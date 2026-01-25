@@ -131,11 +131,14 @@ async function handleDeleteThreads() {
 
 
 <style lang="scss" scoped>
-#thread-menu {
-    width: 12.5%;
+$border-radius: 1rem;
+$space: 1rem;
 
-    height: 100%;
-    margin:0;
+#thread-menu {
+    // width: calc(12.5% - 2rem);
+
+    // height: calc(100% - 2rem);
+    margin: $space;
 
     display: flex;
     flex-direction: column;
@@ -146,12 +149,25 @@ async function handleDeleteThreads() {
     offset: 0;
 
     padding: 0;
+    padding-top: $space;
+    
+    overflow-x: scroll;
 
-    overflow: scroll;
+    border-radius: $border-radius;
+
+    background-color: #171A21;
+
+    grid-area: menu;
+    overflow-y: hidden;
+
 
     button {
-        width: 100%;
+        width: calc(100% - $space * 2);
         box-sizing: border-box;
+        border-radius: $border-radius;
+
+        background-color: #1E2230;
+
     }
 
     .flex-row {

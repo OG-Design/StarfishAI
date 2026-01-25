@@ -97,7 +97,9 @@ function handleUpdateThreadsAvailable(payload: object = {empty: "empty"}) {
   <OpenThread v-if="authenticated" :title="selectedThread.title || 'No thread selected'" :index="selectedThread.idThread || null" :idThread="selectedThread.idThread" :key="selectedThread.idThread" @updateThreadTitle="handleUpdateThreadTitle"/>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
+$border-radius: 2rem;
+$space: 1rem;
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -109,5 +111,23 @@ function handleUpdateThreadsAvailable(payload: object = {empty: "empty"}) {
 }
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #42b883aa);
+}
+
+#app {
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  grid-template-rows: 1fr;
+  grid-template-areas: 
+    "menu thread"
+  ;
+
+
+
+  background-color: #12141A;
 }
 </style>

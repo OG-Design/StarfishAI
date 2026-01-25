@@ -33,7 +33,7 @@ async function createSocket() {
         return null
     }
 
-    const s = io("http://localhost:3000", {
+    const s = io("http://192.168.1.11:3000", {
         withCredentials: true,
         auth: { token }
     });

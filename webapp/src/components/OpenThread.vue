@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import {ref, onMounted, computed, watch} from 'vue';
+import {ref, onMounted, computed, watch, nextTick} from 'vue';
 
 import MarkdownIt from 'markdown-it';
 
@@ -14,12 +14,19 @@ const props = defineProps<{title: string, index: number, idThread: number}>();
 // console.log(props);
 
 const messages = ref<any[]>([]);
-
+const personality = ref<string>('');
 
 const emit = defineEmits(['updateThreadTitle']);
 
 onMounted(async () => {
 
+  
+  // get all messages on load
+  await getAllMessages();
+
+  nextTick().then(()=>{
+    scrollToBottom();
+  })
 
 });
 
@@ -36,10 +43,17 @@ async function getAllMessages() {
 
   messages.value = data;
 
+  const systemMessage = data.find((msg: any) => {
+    return msg.role==='system'
+  });
+
+  if (systemMessage) {
+    personality.value=systemMessage.content;
+    console.log("personality.value:",personality.value)
+  }
+
 }
 
-// get all messages on load
-getAllMessages();
 
 const prompt = ref(null);
 const isLoading = ref(false);
@@ -101,11 +115,14 @@ function handlePrompt() {
 
   }); //get all messages after prompt is done processing
 
-  sendPrompt(props.idThread, message, "llama3"); // model: llama3 llama3.2 smollm2:135m dolphin-phi
+  sendPrompt(props.idThread, message, currentModel.value); // model: llama3 llama3.2 smollm2:135m dolphin-phi
+
+  console.log("Selected model:", currentModel.value);
 
   // log chunks
   console.log(aiChunks);
 
+  
 
   // set isLoading to false
   isLoading.value=false;
@@ -146,6 +163,26 @@ async function handleThreadChange() {
 }
 
 
+
+
+
+
+async function handlePersonalityChange() {
+  const body = {
+    thread: thread,
+    personality: personality.value
+  }
+
+  const res = await fetch("/api/ai/thread/alter/personality", {
+    method: 'POST',
+    headers: {
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+
 // scroll to bottom of thread
 const threadList = ref<HTMLElement | null>(null);
 function scrollToBottom() {
@@ -160,6 +197,9 @@ watch([messages, currentMessage], () => {
   scrollToBottom();
 });
 
+
+const models = ref([ "gurubot/self-after-dark:8b-q8_0", "wizard-vicuna-uncensored:30b", "llama3", "llama3.2", "llama3.3"])
+const currentModel = ref(models.value[0]);
 </script>
 
 <template>
@@ -167,14 +207,31 @@ watch([messages, currentMessage], () => {
     <!-- The title of the thread -->
     <div id="title-area">
       <input type="text" v-model="threadTitle" @change="handleThreadChange" :style="{width: (title.length || 10) + 'ch'}">
+      <select name="" id="models">
+        <option v-for="model in models" :index="model" :value="model">{{model}}</option>
+      </select>
     </div>
 
     <!-- List of messages -->
     <ul id="thread" ref="threadList">
+      <!-- This is the system prompt, handles the personality of the AI -->
+      <template v-for="(message) in messages"> 
+      <!-- System prompt -->
+      <div v-if="message.role === 'system'">
+        <label for="system-prompt">Personality</label>
+        <textarea 
+        id="system-prompt" 
+        @change="handlePersonalityChange"
+        v-model="personality"
+        >{{ message.content }}</textarea>
+      </div>
+      </template>
+
       <!-- Prints all previous messages -->
-      <li
+      <li 
         class="message markdown-content"
         :class="{'message-user': message.role === 'user'} /* If role = user add class message-user */ "
+        :style="{display: message.role === 'system' ? 'none' : 'block' /* Hide system messages */}"
         v-for="(message, index) in messages /* For loop to render each message */"
         :key="index"
         v-html="md.render(message.content ?? '') /* render the message's content in markdown */ "
@@ -194,24 +251,63 @@ watch([messages, currentMessage], () => {
 
 <style lang="scss">
 
+$border-radius: 1rem;
+
+$space: 1rem;
+
+#system-prompt {
+  width: calc(100% - $space * 2);
+  height: auto;
+  min-height: 50px;
+
+  background-color: #1E2230;
+
+  border: solid 1px #1E2230;
+  border-radius: $border-radius;
+
+  margin: $space;
+  margin-bottom: 0;
+
+  padding: $space;
+
+  box-sizing: border-box;
+
+  resize: none;
+
+  // font-style: italic; 
+  color: #888b94;
+}
+
 #title-area {
   height: 10%;
   width: 100%;
 
+  position: absolute;
+  z-index: 10;
+  top: 0;
+
 }
 
 #thread-main {
+
   display: flex;
   flex-direction: column;
 
-  width: 82.5%;
   height: 100%;
+  width: 100%;
+  margin: 0;
 
+  margin-top: 10px; /* fix for title area */
+
+  grid-area: thread;
+
+  background-color: #12141A;
 }
 
 #thread {
-  width: 100%;
-  height: 70%;
+  min-width: calc(100% - $space * 2);
+  height: calc(100% - $space * 2);
+  width: calc(100% - $space * 2);
 
   display: flex;
   flex-direction: column;
@@ -220,38 +316,103 @@ watch([messages, currentMessage], () => {
 
   overflow: scroll;
 
-  margin: 1rem;
+  padding: $space;
+
+  gap: calc($space * 5);
 
   box-sizing: border-box;
 
 }
 
 #prompt {
-  width: 100%;
+  width: calc(100% - $space * 2);
   height: 20%;
+  background-color: #171A21;
 
   display: flex;
   flex-direction: row;
   justify-content: center;
   align-items: center;
 
-  gap: 1rem;
+  gap: $space;
+  margin: calc($space / 2);
+  margin-bottom: $space;
+
+  border-radius: $border-radius;
 
   box-sizing: border-box;
+
+  textarea {
+
+    width: 80%;
+    height: calc(100% - $space * 2);
+
+    resize: none;
+
+    background-color: #1E2230;
+
+    border: solid 1px #1E2230;
+    border-radius: $border-radius;
+
+    &:active, &:focus {
+      border: solid 1px #646cff;
+    }
+
+  }
+
+  button {
+    $btn-size: 75px;
+
+    width: $btn-size;
+    height: $btn-size;
+
+    border: none;
+    border-radius: $border-radius * 10000;
+
+    background-color: hsla(240, 100%, 74%, 12%);
+    color: white;
+    font-weight: 600;
+
+    &:hover {
+      
+
+      width: calc($btn-size * 1.05);
+      height: calc($btn-size * 1.05);
+
+      background-color: hsla(240, 100%, 74%, 50%);
+      cursor: pointer;
+    }
+
+    &:focus {
+      width: calc($btn-size * 1.01);
+      height: calc($btn-size * 1.01);
+
+
+      background-color: hsla(240, 100%, 74%, 50%);
+    }
+
+    &:disabled {
+      background-color: #44475a;
+      cursor: not-allowed;
+    }
+  }
 
 
 }
 .message {
-  width: fit-content;
+  width: 70%;
   max-width: 70%;
   list-style-type: none;
   offset: 0;
 
+  box-sizing: border-box;
+  
 }
 .message-user {
-  width: fit-content;
+  width: 70%;
   max-width: 70%;
   align-self: flex-end;
+  justify-items: end;
 }
 
 

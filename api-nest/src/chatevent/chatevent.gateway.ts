@@ -1,5 +1,5 @@
 const PORT_WEBAPP = 5173;
-const ADRESS_HOST = "http://localhost";
+const ADRESS_HOST = "http://192.168.1.11";
 import { Session, Body, UnauthorizedException} from '@nestjs/common';
 import { SubscribeMessage, WebSocketGateway, MessageBody, ConnectedSocket } from '@nestjs/websockets';
 
@@ -12,9 +12,10 @@ const db = new Database(process.cwd()+"/starfish.db");
 
 import { Socket } from 'socket.io';
 import ollama from 'ollama';
+import { S } from 'ollama/dist/shared/ollama.1bfa89da.cjs';
 @WebSocketGateway({
   cors: {
-    origin: `${ADRESS_HOST}:${PORT_WEBAPP}`, // change cors
+    origin: [`${ADRESS_HOST}:${PORT_WEBAPP}`, "http://localhost:5173"], // change cors
     credentials: true
   }
 })
@@ -66,7 +67,11 @@ export class ChateventGateway {
 
     db.prepare('INSERT INTO message (data, idThread) VALUES (?, ?)').run(JSON.stringify(message), thread);
 
-    const context = db.prepare('SELECT * FROM message WHERE idThread = ? ORDER BY rowid DESC LIMIT 10').all(thread);
+    const context = db.prepare('SELECT * FROM message WHERE idThread = ? ORDER BY rowid DESC LIMIT 25').all(thread);
+    const systemPrompt: any = db.prepare('SELECT * FROM message WHERE idThread = ? AND isSystem = 1').get(thread);
+    
+    
+    messages.push(JSON.parse(systemPrompt.data));
     context.reverse().forEach((me: any) => {
         try {
           // console.log("message", me)

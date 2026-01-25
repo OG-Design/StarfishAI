@@ -33,6 +33,14 @@ export class AiService {
 
         const threads = db.prepare("INSERT INTO thread (title, author_idUser) VALUES ('Untitled', ?)").run(idUser);
 
+        const systemPrompt = {
+            role: "system",
+            content: "You are a helpful assistant."
+        };
+
+        // insert system prompt as first message
+        db.prepare("INSERT INTO message (data, idThread, isSystem) VALUES (?, ?, 1)").run(JSON.stringify(systemPrompt), threads.lastInsertRowid);
+
         console.log("Result of thread:", threads);
 
         const newThreads = db.prepare("SELECT idThread, title FROM thread WHERE title = 'Untitled'").all();
@@ -54,6 +62,18 @@ export class AiService {
 
         const alterThread = db.prepare("UPDATE thread SET title = ? WHERE author_idUser = ? AND idThread = ? ").run(title, idUser, thread);
 
+    }
+
+    // alters the system prompt 
+    alterPersonality(session: any, thread: number, personality: string) { 
+        const idUser = session.user.idUser;
+
+        const isAuthor = db.prepare("SELECT * FROM thread WHERE author_idUser = ? AND idThread = ?").all(idUser, thread);
+        console.log("User", session.user.idUser, "is trying to access thread", thread, "\n Result of isAuthor:", isAuthor);
+        
+
+        const structuredContent = {role:"system",content: personality}; 
+        db.prepare("UPDATE message SET data = ? WHERE idThread = ? AND isSystem = 1 ").run(JSON.stringify(structuredContent), thread);
     }
 
     deleteThreads(session: any, threads: number[]) {

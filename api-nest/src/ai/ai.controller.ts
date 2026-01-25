@@ -21,6 +21,10 @@ export class AiController {
     alterThread(@Session() session: Record<string, any>, @Body('thread') thread: number, @Body('title') title: string) {
         return this.aiService.alterThread(session, thread, title);
     }
+    @Post('thread/alter/personality')
+    alterPersonality(@Session() session: Record<string, any>, @Body('thread') thread: number, @Body('personality') personality: string) {
+        return this.aiService.alterPersonality(session, thread, personality);
+    }
 
     @Post('thread/deleteSelected')
     deleteThreads(@Session() session: Record<string, any>, @Body('threads') threads: number[]) {
