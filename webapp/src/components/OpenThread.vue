@@ -216,7 +216,7 @@ watch([messages, currentMessage], () => {
 });
 
 // replace by API provided model list
-const models = ref([ "gurubot/self-after-dark:8b-q8_0", "wizard-vicuna-uncensored:30b", "llama3", "llama3.2", "llama3.3"])
+const models = ref([ "llama3", "llama3.2", "llama3.3"])
 const currentModel = ref(models.value[0]);
 
 </script>
@@ -224,22 +224,23 @@ const currentModel = ref(models.value[0]);
 <template>
   <main id="thread-main">
     <!-- The title of the thread -->
-    <div id="title-area">
+    <div id="top-menu">
       <input type="text" v-model="threadTitle" @change="handleThreadChange" :style="{width: (title.length || 10) + 'ch'}">
       <select name="" id="models" v-model="currentModel">
         <option v-for="(model, index) in models" :key="index" :value="model">{{model}}</option>
       </select>
+
     </div>
 
     <!-- List of messages -->
     <ul id="thread" ref="threadList">
       <!-- This is the system prompt, handles the personality of the AI -->
-      <template v-for="(message) in messages"> 
+      <template v-for="(message) in messages">
       <!-- System prompt -->
       <div v-if="message.role === 'system'">
         <label for="system-prompt">Personality</label>
-        <textarea 
-        id="system-prompt" 
+        <textarea
+        id="system-prompt"
         @change="handlePersonalityChange"
         v-model="personality"
         >{{ message.content }}</textarea>
@@ -247,7 +248,7 @@ const currentModel = ref(models.value[0]);
       </template>
 
       <!-- Prints all previous messages -->
-      <li 
+      <li
         class="message markdown-content"
         :class="{'message-user': message.role === 'user'} /* If role = user add class message-user */ "
         :style="{display: message.role === 'system' ? 'none' : 'block' /* Hide system messages */}"
@@ -293,11 +294,17 @@ $space: 1rem;
 
   resize: none;
 
-  // font-style: italic; 
+  // font-style: italic;
   color: #888b94;
+
+  transition: .2s;
+
+  &:hover {
+    border: 1px solid #8B5CF6;
+  }
 }
 
-#title-area {
+#top-area {
   height: 10%;
   width: 100%;
 
@@ -334,8 +341,9 @@ $space: 1rem;
 
   overflow: scroll;
 
-  padding: $space;
-
+  margin: $space;
+  margin-bottom: 0;
+  padding-bottom: $space;
   gap: calc($space * 5);
 
   box-sizing: border-box;
@@ -343,7 +351,7 @@ $space: 1rem;
 }
 
 #prompt {
-  width: calc(100% - $space * 2);
+  width: calc(100% - $space );
   height: 20%;
   background-color: #171A21;
 
@@ -353,7 +361,9 @@ $space: 1rem;
   align-items: center;
 
   gap: $space;
-  margin: calc($space / 2);
+  margin: 0;
+  margin-left: calc($space / 2);
+  // margin-right: calc($space / 2);
   margin-bottom: $space;
 
   border-radius: $border-radius;
@@ -374,6 +384,12 @@ $space: 1rem;
 
     &:active, &:focus {
       border: solid 1px #646cff;
+    }
+
+    transition: .2s;
+
+    &:hover {
+      border: 1px solid #646cff;
     }
 
   }
@@ -424,13 +440,30 @@ $space: 1rem;
   offset: 0;
 
   box-sizing: border-box;
-  
+
+  padding: $space;
+
+  border-radius: $border-radius;
+  border: 1px solid #171A21;
+
+  background-color: #171A21;
+
+  transition: .2s;
+
 }
+
+.message:hover {
+  border: 1px solid #8B5CF6;
+}
+
 .message-user {
   width: 70%;
   max-width: 70%;
   align-self: flex-end;
   justify-items: end;
+}
+.message-user:hover {
+  border: 1px solid #646cff;
 }
 
 

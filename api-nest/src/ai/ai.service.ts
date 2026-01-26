@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 
 import thread from '../types/thread';
 
 import ollama from 'ollama';
 
 import Database from 'better-sqlite3';
+import { request } from 'http';
 
 const db = new Database(process.cwd()+"/starfish.db");
 
@@ -188,5 +189,74 @@ export class AiService {
         db.prepare('INSERT INTO message (idThread, data) VALUES (?, ?)').run(thread, JSON.stringify(res.message));
 
         return res;
+    }
+
+
+    async addModel(
+        model: {name: string, fullName: string},
+        group: {name: string, idUserGroup?: number},
+        session: any
+    ) {
+        const idUser = session.user.idUser;
+        const modelName = model.name;
+        const modelFullName = model.fullName;
+        const idGroup = group.idUserGroup;
+        const groupName = group.name;
+
+        // logic for adding model (pull, add to db, etc)
+        try {
+            console.log("Trying to add a model, checking if it already exists on group", groupName);
+            const checkModelExists = db.prepare(`
+SELECT
+-- groupMembers
+groupMember.idGroupMember, groupMember.user_idUser, username,
+-- model
+model.name AS modelName, model.fullName AS modelFullName,
+-- userGroup
+userGroup.idUserGroup, userGroup.name AS groupName
+FROM groupMember
+INNER JOIN userGroup
+ON userGroup.idUserGroup = groupMember.userGroup_idUserGroup
+INNER JOIN model
+ON model.userGroup_idUserGroup = userGroup.idUserGroup
+INNER JOIN user
+ON user.idUser = groupMember.user_idUser
+
+/* By user */
+WHERE idUser = ?
+
+/* By group */
+WHERE idUserGroup = ?
+
+/* By modelName */
+WHERE model.name = ?
+            `).all(idUser, idGroup, modelFullName);
+
+            console.log("Table: checkModelExists");
+            console.table(checkModelExists);
+
+            // check if model exists in db
+            if (checkModelExists.length!=0) {
+                console.log("Model already exists!");
+                throw new ConflictException("Model " + modelFullName + " already exists on group: " + groupName);
+            }
+
+
+
+            console.log("Adding model", modelFullName, "on group", groupName);
+            const model = await ollama.pull({
+                model: modelFullName,
+                stream: false
+            });
+
+
+
+        } catch (err) {
+            console.error("Error occured while adding model:", err);
+            throw new InternalServerErrorException("Internal server error: Adding model failed");
+        }
+
+
+
     }
 }

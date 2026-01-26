@@ -24,4 +24,9 @@ export class UserController {
     delete(@Session() session: Record<string, any>) {
         return this.userService.delete(session);
     }
+
+    @Get('userGroup')
+    getGroup(@Session() session: Record<string, any>) {
+        return this.userService.getGroup(session);
+    }
 }

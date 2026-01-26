@@ -3,6 +3,10 @@
 import ThreadsMenu from './components/ThreadsMenu.vue'
 import OpenThread from './components/OpenThread.vue';
 import Login from './components/Login.vue';
+import Settings from './components/Settings.vue';
+
+
+import TopMenu from './components/TopMenu.vue';
 
 import {ref} from 'vue'
 
@@ -89,17 +93,29 @@ function handleUpdateThreadsAvailable(payload: object = {empty: "empty"}) {
   getAllThreads();
 }
 
+const settingsIsOpen = ref(false);
+
+function handleOpenSettings() {
+  console.log("Opening settings in parent.");
+  settingsIsOpen.value = !settingsIsOpen.value;
+  console.log("settingsIsOpen:" )
+}
+
 </script>
 
 <template>
   <!-- Handles login -->
   <Login v-if="!authenticated" :authenticated="authenticated" @updateThreadsAvailable="handleUpdateThreadsAvailable"/>
 
+  <TopMenu @openSettings="handleOpenSettings"/>
+  <template v-if="settingsIsOpen" :key="settingsIsOpen">
+    <Settings @openSettings="handleOpenSettings"/>
+  </template>
   <template v-if="authenticated" :key="authenticated">
-  <!-- Handles thread selection through handleOpenThread_inParent and in child as handleOpenThread -->
-  <ThreadsMenu :threadsAvailable="threadsAvailable" @openThread="handleOpenThread_inParent" @updateThreadsAvailable="handleUpdateThreadsAvailable"/>
-  <!-- Contains the open thread -->
-  <OpenThread :title="selectedThread.title || 'No thread selected'" :index="selectedThread.idThread || null" :idThread="selectedThread.idThread" :key="selectedThread.idThread" @updateThreadTitle="handleUpdateThreadTitle"/>
+    <!-- Handles thread selection through handleOpenThread_inParent and in child as handleOpenThread -->
+    <ThreadsMenu :threadsAvailable="threadsAvailable" @openThread="handleOpenThread_inParent" @updateThreadsAvailable="handleUpdateThreadsAvailable"/>
+    <!-- Contains the open thread -->
+    <OpenThread :title="selectedThread.title || 'No thread selected'" :index="selectedThread.idThread || null" :idThread="selectedThread.idThread" :key="selectedThread.idThread" @updateThreadTitle="handleUpdateThreadTitle"/>
   </template>
 </template>
 

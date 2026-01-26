@@ -59,4 +59,21 @@ export class AiController {
         return await this.aiService.useModel(body.model, body.message, body.thread, session);
     }
 
+    @Post('model/add')
+    async addModel(
+        @Session() session: Record<string, any>,
+        @Body() body: {
+            model: {
+                name: string,
+                fullName: string
+            },
+            group: {
+                name: string,
+                idUserGroup: number
+            }
+        }
+    ) {
+        return await this.aiService.addModel(body.model, body.group, session);
+    }
+
 }

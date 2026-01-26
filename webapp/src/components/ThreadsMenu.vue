@@ -13,7 +13,7 @@ const emit = defineEmits(['openThread', 'updateThreadsAvailable']);
 console.log(props.threadsAvailable);
 
 
-
+const selectedThread = ref(props.threadsAvailable[1]);
 
 function handleOpenThread(i: number) {
     console.log("Thread opening");
@@ -25,9 +25,13 @@ function handleOpenThread(i: number) {
         return;
     }
 
+
+
     const title = thread.title; // title of selected thread
     const idThread = thread.idThread; // to reference the thread to find
     // console.log(title);
+
+    selectedThread.value=idThread
 
     emit('openThread', thread);
 }
@@ -99,11 +103,13 @@ async function handleDeleteThreads() {
     <ul id="thread-menu">
         <!-- If editmode is not active -->
         <template v-if="!editMode">
-            <button @click="handleEditMode">...</button>
 
+            <div class="flex-row">
+                <button @click="handleEditMode">...</button>
+            </div>
             <!-- For each thread make button to open thread -->
             <li class="menu-child" v-for="(thr, index) in props.threadsAvailable" :key="index" >
-                <button @click="handleOpenThread(index) /* handles thread opening */ ">{{thr.title}}</button>
+                <button @click="handleOpenThread(index) /* handles thread opening */ " :class="{'selected-thread': selectedThread == thr.idThread}" >{{thr.title}}</button>
             </li>
         </template>
 
@@ -118,7 +124,7 @@ async function handleDeleteThreads() {
             <!-- For each thread make button to open thread aswell as the delete checkbox -->
             <li class="menu-child" v-for="(thr, index) in props.threadsAvailable" :key="index" >
                 <button
-                @click="handleOpenThread(index) /* handles thread opening */ ">{{thr.title}}</button>
+                @click="handleOpenThread(index) /* handles thread opening */ " :class="{'selected-thread': selectedThread == thr.idThread}">{{thr.title}}</button>
                 <input type="checkbox"
                 v-model="checkedIds"
                 :value="thr.idThread"
@@ -149,34 +155,52 @@ $space: 1rem;
 
     padding: 0;
     padding-top: $space;
-    
-    overflow-x: scroll;
+
+    margin-left: calc($space / 2);
+
+
 
     border-radius: $border-radius;
 
     background-color: #171A21;
 
     grid-area: menu;
-    overflow-y: hidden;
+    overflow-y: scroll;
+    overflow-x: hidden;
 
 
     button {
         width: calc(100% - $space * 2);
+        height: fit-content;
+
+        padding: $space;
+
         box-sizing: border-box;
         border-radius: $border-radius;
 
+        color: #A0A4B8;
         background-color: #1E2230;
+        border: 1px solid #1E2230;
 
+        transition: .2s;
+
+        &:hover {
+            border: 1px solid hsla(240, 100%, 74%, .4);
+        }
     }
 
     .flex-row {
 
-        width: 100%;
+        width: calc(100% - $space);
 
         display: flex;
         flex-direction: row;
         justify-content: space-around;
         align-items: start;
+
+        gap: $space;
+        padding: $space;
+        padding-bottom: 0;
 
     }
 
@@ -198,6 +222,7 @@ $space: 1rem;
         }
     }
 
+
     .move {
 
         width: 100%;
@@ -211,6 +236,11 @@ $space: 1rem;
 
     .shrink {
         width: 80%;
+    }
+
+    .selected-thread {
+        color: #E6E8EE;
+        border: 1px solid #7C7CFF;
     }
 
 }
