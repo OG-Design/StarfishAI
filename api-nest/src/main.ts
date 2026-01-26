@@ -1,3 +1,5 @@
+const isDev = process.env.NODE_ENV !== 'production'; // set but npm start / start:dev
+
 const PORT = 3000;
 
 import { NestFactory } from '@nestjs/core';
@@ -5,14 +7,17 @@ import { AppModule } from './app.module';
 
 import {sessionMiddleware} from './session';
 import { SessionIoAdapter } from './socket-io.adapter';
+import { type } from 'os';
+
+
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: [
-      "http://192.168.1.11:5173"
-    ],
+    origin: isDev
+      ? true
+      : ['https://yourdomain.com'],
     credentials: true
   });
 

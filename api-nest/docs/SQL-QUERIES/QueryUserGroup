@@ -1,0 +1,31 @@
+/*SELECT * FROM groupMember 
+LEFT JOIN userGroup
+ON userGroup.idUserGroup = groupMember.idGroupMember 
+WHERE userGroup_idUserGroup = 2 -- Public group: Has all public models in model table.
+*/
+
+/*
+I need: 
+
+id of group = idUserGroup,
+id of user = user_idUser from groupMember.user_idUser
+id userGroup = userGroup_idUserGroup from groupMember
+
+name = name from userGroup.name
+permissionLevel = permissionLevel from userGroup
+*/
+
+/* Selects userdata, groupMembers of userGroups and their permissions */
+SELECT idGroupMember, name, permissionLevel, username, userGroup_idUserGroup, user_idUser 
+FROM groupMember
+INNER JOIN userGroup -- join userGroup's (the permission level groups)
+ON groupMember.userGroup_idUserGroup = userGroup.idUserGroup
+INNER JOIN user -- join userdata
+ON groupMember.user_idUser = user.idUser
+
+
+/* By user's id */
+-- WHERE idUser = ?
+
+/* By userGroup id */
+--WHERE idUserGroup = ?

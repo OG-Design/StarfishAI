@@ -110,7 +110,7 @@ async function handleLogin() {
 
         // Emit value true for authenticated
         emit('authenticated', true);
-
+        emit('updateThreadsAvailable')
         connectSocket(); //connect socket after login
 
         // Emit object doUpdate, makes the threadMenu update it's selection

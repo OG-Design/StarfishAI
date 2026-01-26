@@ -33,6 +33,10 @@ async function getAllThreads() {
 
   threadsAvailable.value = data;
 
+  console.log("Changing selected threads value from \n", selectedThread.value);
+  selectedThread.value=data[0]; // set the selected thread to the first available thread
+  console.log("to \n", selectedThread.value);
+
   console.log("Threads available: \n", threadsAvailable.value);
 }
 
@@ -81,6 +85,7 @@ function handleUpdateThreadTitle({idThread, title}: thread) {
 // updates the thread selection on login
 function handleUpdateThreadsAvailable(payload: object = {empty: "empty"}) {
   console.log("Update threads:", payload);
+  checkSession(); // update on updateThreadsAvailable to render if authenticated components
   getAllThreads();
 }
 
@@ -90,11 +95,12 @@ function handleUpdateThreadsAvailable(payload: object = {empty: "empty"}) {
   <!-- Handles login -->
   <Login v-if="!authenticated" :authenticated="authenticated" @updateThreadsAvailable="handleUpdateThreadsAvailable"/>
 
+  <template v-if="authenticated" :key="authenticated">
   <!-- Handles thread selection through handleOpenThread_inParent and in child as handleOpenThread -->
   <ThreadsMenu :threadsAvailable="threadsAvailable" @openThread="handleOpenThread_inParent" @updateThreadsAvailable="handleUpdateThreadsAvailable"/>
-
   <!-- Contains the open thread -->
-  <OpenThread v-if="authenticated" :title="selectedThread.title || 'No thread selected'" :index="selectedThread.idThread || null" :idThread="selectedThread.idThread" :key="selectedThread.idThread" @updateThreadTitle="handleUpdateThreadTitle"/>
+  <OpenThread :title="selectedThread.title || 'No thread selected'" :index="selectedThread.idThread || null" :idThread="selectedThread.idThread" :key="selectedThread.idThread" @updateThreadTitle="handleUpdateThreadTitle"/>
+  </template>
 </template>
 
 <style lang="scss" scoped>
@@ -113,21 +119,4 @@ $space: 1rem;
   filter: drop-shadow(0 0 2em #42b883aa);
 }
 
-#app {
-  height: 100vh;
-  width: 100vw;
-  margin: 0;
-  padding: 0;
-
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  grid-template-rows: 1fr;
-  grid-template-areas: 
-    "menu thread"
-  ;
-
-
-
-  background-color: #12141A;
-}
 </style>

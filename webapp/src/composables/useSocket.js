@@ -1,3 +1,6 @@
+const socketUrl = import.meta.env.VITE_SOCKET_URL;
+
+
 import { ref } from 'vue';
 import { io } from 'socket.io-client'; // used for socket functionallity
 
@@ -16,7 +19,7 @@ async function checkJWT() {
 
     console.log("JWT:", data.jwt);
 
-    if (data) {
+    if (data && data.jwt) {
         return data.jwt;
     }
 
@@ -33,7 +36,7 @@ async function createSocket() {
         return null
     }
 
-    const s = io("http://192.168.1.11:3000", {
+    const s = io(socketUrl, {
         withCredentials: true,
         auth: { token }
     });
@@ -53,7 +56,11 @@ async function createSocket() {
             console.log("Socket disconnected");
             // wait a moment before reconnecting
             setTimeout(async () => {
-                socket = await createSocket();
+                const newToken = await checkJWT();
+                if (newToken) {
+                    s.auth = {token: newToken};
+                    socket = await createSocket();
+                }
             }, 1000);
         }
     });

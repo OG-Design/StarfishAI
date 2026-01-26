@@ -32,7 +32,7 @@ export class AuthController {
         const token = jwt.sign(
             {idUser: user.idUser, username: user.username}, //payload
             secretJWT, // token secret CHANGE
-            {expiresIn: '1m'} // expiration time
+            {expiresIn: '10m'} // expiration time
         )
 
         console.log("Token generated:\n", token);

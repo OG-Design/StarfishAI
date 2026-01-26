@@ -20,7 +20,7 @@ const emit = defineEmits(['updateThreadTitle']);
 
 onMounted(async () => {
 
-  
+
   // get all messages on load
   await getAllMessages();
 
@@ -124,8 +124,26 @@ function handlePrompt() {
 
   
 
-  // set isLoading to false
-  isLoading.value=false;
+  // on ai_complete
+  socket.once('ai_complete', () => {
+    // set isLoading to false
+    isLoading.value=false;
+  });
+
+  // give feedback on error aswell as setting isLoading to false
+  socket.once('error', (err: any) => {
+    console.error("Socket error:", err);
+    isLoading.value = false;
+    alert("Error occurred while processing your request.\n Error: "+err.message);
+  })
+
+  socket.once('connect_error', (err: any) => {
+    console.error("Connection error:", err);
+    isLoading.value = false;
+    alert("Connection error occurred");
+
+  })
+
 }
 
 
@@ -197,9 +215,10 @@ watch([messages, currentMessage], () => {
   scrollToBottom();
 });
 
-
+// replace by API provided model list
 const models = ref([ "gurubot/self-after-dark:8b-q8_0", "wizard-vicuna-uncensored:30b", "llama3", "llama3.2", "llama3.3"])
 const currentModel = ref(models.value[0]);
+
 </script>
 
 <template>
@@ -207,8 +226,8 @@ const currentModel = ref(models.value[0]);
     <!-- The title of the thread -->
     <div id="title-area">
       <input type="text" v-model="threadTitle" @change="handleThreadChange" :style="{width: (title.length || 10) + 'ch'}">
-      <select name="" id="models">
-        <option v-for="model in models" :index="model" :value="model">{{model}}</option>
+      <select name="" id="models" v-model="currentModel">
+        <option v-for="(model, index) in models" :key="index" :value="model">{{model}}</option>
       </select>
     </div>
 
@@ -293,8 +312,7 @@ $space: 1rem;
   display: flex;
   flex-direction: column;
 
-  height: 100%;
-  width: 100%;
+
   margin: 0;
 
   margin-top: 10px; /* fix for title area */

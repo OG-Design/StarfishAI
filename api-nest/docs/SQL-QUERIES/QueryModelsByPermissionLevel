@@ -1,0 +1,40 @@
+/*
+I need to get all model data and join it with the related permission groups
+idModel = model.idModel
+name = model.name
+userGroup = model.userGroup_idUserGroup from usergroup
+*/
+
+--SELECT /*idModel,*/ model.name AS modelName, model.userGroup_idUserGroup AS userGroup, userGroup.name AS groupName, permissionLevel, idGroupMember AS idUser, username
+--FROM model 
+--INNER JOIN userGroup
+--ON model.userGroup_idUserGroup = userGroup.idUserGroup
+--INNER JOIN groupMember
+--ON userGroup.idUserGroup = userGroup
+--INNER JOIN user
+--ON groupMember.user_idUser = user.idUser
+--WHERE user.idUser = ?
+
+SELECT 
+-- groupMembers
+groupMember.idGroupMember, groupMember.user_idUser, username,
+-- model
+model.name AS modelName, model.fullName AS modelFullName,
+-- userGroup
+userGroup.idUserGroup, userGroup.name AS groupName
+FROM groupMember
+INNER JOIN userGroup
+ON userGroup.idUserGroup = groupMember.userGroup_idUserGroup
+INNER JOIN model
+ON model.userGroup_idUserGroup = userGroup.idUserGroup
+INNER JOIN user
+ON user.idUser = groupMember.user_idUser
+
+/* By user */
+-- WHERE idUser = ?
+
+/* By group */
+-- WHERE idUserGroup = ?
+
+/* By modelName */
+WHERE model.name = "llama3"

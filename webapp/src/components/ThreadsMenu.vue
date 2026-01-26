@@ -138,7 +138,6 @@ $space: 1rem;
     // width: calc(12.5% - 2rem);
 
     // height: calc(100% - 2rem);
-    margin: $space;
 
     display: flex;
     flex-direction: column;

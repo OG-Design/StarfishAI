@@ -30,25 +30,35 @@ export class ChateventGateway {
     @ConnectedSocket() client: Socket,
   ) {
     console.log("Connection open on ChateventGateway, running for thread", data.thread)
+
+
+
     const message = data.message;
     const thread = data.thread;
     const model = data.model;
 
     const token = client.handshake.auth.token;
-    if(!token) {
+
+    console.log("Token received:", token, "Type:", typeof token);
+
+    // token type check
+    if(!token || typeof token !== 'string') {
+      console.error("Invalid or missing token");
+      client.emit('error', {message: 'Authentication failed'});
       client.disconnect();
       return
     }
 
-    const userToken = jwt.verify(token.toString(), secretJWT);
+    // verify token
+    const userToken = jwt.verify(token, secretJWT);
 
+    // check verification
     if (!userToken) {
       console.error("JWT not valid");
       return new UnauthorizedException("Invalid JWT");
     }
 
     const idUser = userToken.idUser;
-
     const thread_author = db.prepare('SELECT * FROM thread WHERE author_idUser = ? AND idThread = ? ').all(idUser, thread)
 
     console.log(thread_author);
@@ -69,8 +79,8 @@ export class ChateventGateway {
 
     const context = db.prepare('SELECT * FROM message WHERE idThread = ? ORDER BY rowid DESC LIMIT 25').all(thread);
     const systemPrompt: any = db.prepare('SELECT * FROM message WHERE idThread = ? AND isSystem = 1').get(thread);
-    
-    
+
+
     messages.push(JSON.parse(systemPrompt.data));
     context.reverse().forEach((me: any) => {
         try {
@@ -86,12 +96,18 @@ export class ChateventGateway {
 
 
 
-    
+    try {
     const stream = await ollama.chat({
       model: model,
       messages: messages,
       stream: true
     });
+
+    if (!stream) {
+      client.emit('error', (err: any) => {
+        console.error("Stream error:", err);
+      })
+    }
 
 
     const allChunks: any[] = [];
@@ -116,6 +132,13 @@ export class ChateventGateway {
     // insert message into db
     db.prepare("INSERT INTO message (data, idThread) VALUES (?, ?)").run(JSON.stringify(messageResponse), thread);
 
-
+    client.emit('ai_complete');
+    } catch (err) {
+      console.error("Ollama error:", err);
+      client.emit('error', {
+        message: err.error || 'Failed to process your request',
+        status_code: err.status_code || 500
+      });
+    }
   }
 }
