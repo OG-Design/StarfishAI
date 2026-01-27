@@ -47,6 +47,12 @@ export class UserService {
             const hash = await bcrypt.hash(password, saltRounds);
             db.prepare('INSERT INTO user (username, hash) VALUES (?, ?)').run(username, hash);
             console.log("Registered user: ", username);
+
+            const user: any = db.prepare("SELECT idUser FROM user WHERE username = ?").get(username);
+            console.log(user.idUser);
+
+            db.prepare("INSERT INTO groupMember (user_idUser, userGroup_idUserGroup) VALUES (?, 2)").run(user.idUser);
+
             return "User has been registered";
         } catch (err) {
             console.error("error: ", err);

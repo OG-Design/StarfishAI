@@ -9,7 +9,7 @@ import { sendPrompt, aiChunks, socket } from '../composables/useSocket';
 
 const md = new MarkdownIt();
 
-const props = defineProps<{title: string, index: number, idThread: number}>();
+const props = defineProps<{title: string, index: number, idThread: number, models: any[]}>();
 
 // console.log(props);
 
@@ -115,7 +115,7 @@ function handlePrompt() {
 
   }); //get all messages after prompt is done processing
 
-  sendPrompt(props.idThread, message, currentModel.value); // model: llama3 llama3.2 smollm2:135m dolphin-phi
+  sendPrompt(props.idThread, message, currentModel.value.modelFullName); // model: llama3 llama3.2 smollm2:135m dolphin-phi
 
   console.log("Selected model:", currentModel.value);
 
@@ -216,8 +216,13 @@ watch([messages, currentMessage], () => {
 });
 
 // replace by API provided model list
-const models = ref([ "llama3", "llama3.2", "llama3.3"])
+const models = ref(props.models)
 const currentModel = ref(models.value[0]);
+
+console.log(props.models)
+console.log("Models: \n", models);
+
+
 
 </script>
 
@@ -227,7 +232,7 @@ const currentModel = ref(models.value[0]);
     <div id="top-menu">
       <input type="text" v-model="threadTitle" @change="handleThreadChange" :style="{width: (title.length || 10) + 'ch'}">
       <select name="" id="models" v-model="currentModel">
-        <option v-for="(model, index) in models" :key="index" :value="model">{{model}}</option>
+        <option v-for="(model, index) in models" :key="index" :value="model">{{model.modelName}}</option>
       </select>
 
     </div>

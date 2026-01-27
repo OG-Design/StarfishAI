@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS userGroup (
 
 -- handles members of each group
 CREATE TABLE IF NOT EXISTS groupMember (
-  idGroupMember INT NOT NULL PRIMARY KEY,
+  idGroupMember INTEGER NOT NULL PRIMARY KEY,
   user_idUser INTEGER,
   userGroup_idUserGroup INTEGER,
   FOREIGN KEY (user_idUser) REFERENCES user(idUser),

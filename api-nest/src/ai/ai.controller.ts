@@ -76,4 +76,17 @@ export class AiController {
         return await this.aiService.addModel(body.model, body.group, session);
     }
 
+    @Post('model/all')
+    getModelsByGroup(
+        @Session() session: Record<string, any>,
+        @Body() body: {
+            group: {
+                name: string,
+                idUserGroup: number
+            }
+        } 
+    ) {
+        return this.aiService.getModelsByGroup(body.group, session);
+    }
+
 }

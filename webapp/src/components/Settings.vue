@@ -1,12 +1,13 @@
 <script setup>
 import { defineEmits, ref } from 'vue';
 
-const emit = defineEmits(["openSettings"]);
+const emit = defineEmits(["openSettings", "updateSelectedGroup"]);
 
 function handleSettingsMenu() {
     emit("openSettings");
 }
 
+// fetch groups accessible by user (userGroup contains models)
 async function fetchUserGroup() {
     const res = await fetch("/api/user/userGroup", {
         method: 'GET',
@@ -15,19 +16,76 @@ async function fetchUserGroup() {
         }
     })
 
-    groups.value=await res.json();
+    const groupsRes = await res.json()
+
+    groups.value=groupsRes;
+    
+    selectedGroup.value = await groupsRes[0];
+    console.log("Selected group:", groupsRes[0]);
 
     console.log("UserGroups: \n", await groups.value);
 }
 
 fetchUserGroup();
 
+async function fetchModelsByGroup() {
+    
+    console.log("selectedGroup id: \n", selectedGroup.value.userGroup_idUserGroup)
+
+    const body = {
+        group: {
+            name: selectedGroup.value.name,
+            idUserGroup: selectedGroup.value.userGroup_idUserGroup
+        }
+    }
+
+    const res = await fetch("/api/ai/model/all", {
+        method: 'POST',
+        headers: {
+            "Content-Type":"application/json"
+        },
+        body: JSON.stringify(body)
+    })
+
+    models.value = await res.json();
+
+    console.log("models: \n", await models.value);
+
+    emit("updateSelectedGroup", models.value); // emit to parent to pass from parent to OpenThread, this allows the list of models to be displayed
+}
+
+async function addModelToGroup() {
+    responseAddModel("Loading...");
+    const body = {
+        model: {
+                name: addName.value,
+                fullName: addFullName.value
+            },
+        group: {
+            name: selectedGroup.value.name,
+            idUserGroup: selectedGroup.value.userGroup_idUserGroup
+        }
+    }
+    console.log("addModelToGroup, Body: \n", body);
+    const res = await fetch('/api/ai/model/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type':'application/json'
+        },
+        body: JSON.stringify(body)
+    })
+    const data = await res;
+    responseAddModel.value=await data;
+    console.log("Result of adding model:", await data);
+}
+
 const models = ref([]);
 const groups = ref([]);
 const selectedGroup = ref({});
-async function fetchModelsByGroup() {
+const addName = ref("");
+const addFullName = ref("");
 
-}
+const responseAddModel = ref("");
 
 </script>
 
@@ -49,17 +107,21 @@ async function fetchModelsByGroup() {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="value in source"></tr>
-                            <tr>
-                                <th>llama3</th>
-                                <th>llama3</th>
+                            <tr v-for="(model, index) in models" :key="index">
+                                <th>{{ model.modelName }}</th>
+                                <th>{{ model.modelFullName }}</th>
                                 <th><div class="status-ready"></div></th>
                             </tr>
-
+                            <tr>
+                                <th><input type="text" name="" id="modelName" placeholder="name" v-model="addName"></th>
+                                <th><input type="text" name="" id="modelFullName" placeholder="fullname" v-model="addFullName"></th>
+                                <th><button @click="addModelToGroup">Add</button></th>
+                                <th>{{ responseAddModel }}</th>
+                            </tr>
                         </tbody>
                     </table>
-                    <select>
-                        <option v-for="(group, index) in groups" :value="group.idUserGroup">{{group.name}}</option>
+                    <select v-model="selectedGroup" :key="selectedGroup" @change="fetchModelsByGroup">
+                        <option v-for="(group, index) in groups" :value="group">{{group.name, group.userGroup_idUserGroup}}</option>
                     </select>
                 </div>
             </li>
@@ -95,6 +157,7 @@ h1 {
 }
 #settings-menu {
     width: 100%;
+    max-width: 800px;
     height: 100%;
 
     background-color: #171A21;
@@ -151,6 +214,7 @@ h1 {
 
 .table {
     width: 100%;
+    max-width: 400px;
     height: fit-content;
     background-color: hsla(0, 0%, 85%, .2);
     border-radius: $border-radius;
@@ -158,7 +222,6 @@ h1 {
 
     border-collapse: separate;
     border-spacing: $space calc($space / 2);
-
 
     tbody {
         tr {

@@ -15,6 +15,7 @@ import type {selectedThread} from './types/selectedThread'
 
 // imports threadsAvailable from a globally available type between api and webapp
 import type thread from '../../types/thread';
+import { parseBuildCommand } from 'typescript';
 
 // make authenticated state ref
 const authenticated = ref(false);
@@ -101,6 +102,67 @@ function handleOpenSettings() {
   console.log("settingsIsOpen:" )
 }
 
+
+// update to selected userGroup (to access models)
+const modelsAvailable = ref([]);
+function handleSelectedGroup(payload: any) {
+  console.log("Updating modelsAvailable with:\n", payload);
+  modelsAvailable.value=payload;
+}
+
+
+
+async function fetchUserGroup() {
+    const res = await fetch("/api/user/userGroup", {
+        method: 'GET',
+        headers: {
+            "Content-Type":"application/json"
+        }
+    })
+
+    const groupsRes = await res.json()
+
+    groups.value=groupsRes;
+    
+    selectedGroup.value = await groupsRes[0];
+    console.log("Selected group:", groupsRes[0]);
+
+    console.log("UserGroups: \n", await groups.value);
+    fetchModelsByGroup();
+}
+
+fetchUserGroup();
+
+async function fetchModelsByGroup() {
+    
+    console.log("selectedGroup id: \n", 0);
+
+    const body = {
+        group: {
+            name: "Public",
+            idUserGroup: 2
+        }
+    }
+
+    const res = await fetch("/api/ai/model/all", {
+        method: 'POST',
+        headers: {
+            "Content-Type":"application/json"
+        },
+        body: JSON.stringify(body)
+    })
+
+    models.value = await res.json();
+
+    console.log("models: \n", await models.value);
+
+}
+const models = ref([]);
+const groups = ref([]);
+const selectedGroup = ref({});
+
+
+
 </script>
 
 <template>
@@ -109,13 +171,13 @@ function handleOpenSettings() {
 
   <TopMenu @openSettings="handleOpenSettings"/>
   <template v-if="settingsIsOpen" :key="settingsIsOpen">
-    <Settings @openSettings="handleOpenSettings"/>
+    <Settings @updateSelectedGroup="handleSelectedGroup" @openSettings="handleOpenSettings"/>
   </template>
   <template v-if="authenticated" :key="authenticated">
     <!-- Handles thread selection through handleOpenThread_inParent and in child as handleOpenThread -->
     <ThreadsMenu :threadsAvailable="threadsAvailable" @openThread="handleOpenThread_inParent" @updateThreadsAvailable="handleUpdateThreadsAvailable"/>
     <!-- Contains the open thread -->
-    <OpenThread :title="selectedThread.title || 'No thread selected'" :index="selectedThread.idThread || null" :idThread="selectedThread.idThread" :key="selectedThread.idThread" @updateThreadTitle="handleUpdateThreadTitle"/>
+    <OpenThread :title="selectedThread.title || 'No thread selected'" :index="selectedThread.idThread || null" :idThread="selectedThread.idThread" :key="selectedThread.idThread" @updateThreadTitle="handleUpdateThreadTitle" :models="models"/>
   </template>
 </template>
 

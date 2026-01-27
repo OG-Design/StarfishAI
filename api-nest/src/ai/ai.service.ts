@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 
 import thread from '../types/thread';
 
@@ -209,7 +209,7 @@ export class AiService {
             const checkModelExists = db.prepare(`
 SELECT
 -- groupMembers
-groupMember.idGroupMember, groupMember.user_idUser, username,
+groupMember.idGroupMember, username,
 -- model
 model.name AS modelName, model.fullName AS modelFullName,
 -- userGroup
@@ -226,10 +226,10 @@ ON user.idUser = groupMember.user_idUser
 WHERE idUser = ?
 
 /* By group */
-WHERE idUserGroup = ?
+AND idUserGroup = ?
 
 /* By modelName */
-WHERE model.name = ?
+AND model.name = ?
             `).all(idUser, idGroup, modelFullName);
 
             console.log("Table: checkModelExists");
@@ -251,6 +251,15 @@ WHERE model.name = ?
 
 
 
+            db.prepare(`
+            INSERT INTO model (name, fullname, userGroup_idUserGroup) VALUES (?, ?, ?)    
+            `).run(modelName, modelFullName, idGroup);
+
+
+            return "Model added successfully!"
+
+
+
         } catch (err) {
             console.error("Error occured while adding model:", err);
             throw new InternalServerErrorException("Internal server error: Adding model failed");
@@ -259,4 +268,68 @@ WHERE model.name = ?
 
 
     }
+
+    async getModelsByGroup(
+    group: {
+        name: string,
+        idUserGroup: number
+    },
+    session: any) {
+    
+        const idUser = session.user.idUser;
+        const idUserGroup = group.idUserGroup;
+
+        console.log(group);
+
+        const isUserGroup = db.prepare(`
+SELECT idGroupMember, name, permissionLevel, username, userGroup_idUserGroup 
+FROM groupMember
+INNER JOIN userGroup -- join userGroup's (the permission level groups)
+ON groupMember.userGroup_idUserGroup = userGroup.idUserGroup
+INNER JOIN user -- join userdata
+ON groupMember.user_idUser = user.idUser
+
+
+/* By user's id */
+WHERE idUser = ?
+
+/* By userGroup id */
+AND idUserGroup = ?    
+        `).all(idUser, idUserGroup);
+        console.log("Result of isUserGroup:", isUserGroup);
+    
+        if (!isUserGroup) {
+            throw new BadRequestException("You are not a member of", group.name);
+        }
+
+        const modelsByGroup = db.prepare(`
+            SELECT 
+-- groupMembers
+groupMember.idGroupMember, groupMember.user_idUser, username,
+-- model
+model.name AS modelName, model.fullName AS modelFullName,
+-- userGroup
+userGroup.idUserGroup, userGroup.name AS groupName
+FROM groupMember
+INNER JOIN userGroup
+ON userGroup.idUserGroup = groupMember.userGroup_idUserGroup
+INNER JOIN model
+ON model.userGroup_idUserGroup = userGroup.idUserGroup
+INNER JOIN user
+ON user.idUser = groupMember.user_idUser
+
+/* By user */
+ WHERE idUser = ?
+
+/* By group */
+AND idUserGroup = ?
+        `).all(idUser, idUserGroup);
+
+        console.log("Models found in group:", group.name);
+        console.log(modelsByGroup);
+
+        return modelsByGroup;
+    
+    }
+
 }
