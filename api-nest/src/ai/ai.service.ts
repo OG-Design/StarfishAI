@@ -246,22 +246,33 @@ AND model.name = ?
             console.log("Adding model", modelFullName, "on group", groupName);
             const model = await ollama.pull({
                 model: modelFullName,
-                stream: false
+                stream: true
             });
 
+            let lastStatus = "";
+            for await (const event of model as AsyncIterable<any>) {
+                lastStatus= event?.status ?? lastStatus;
+                console.log(lastStatus);
+            }
 
+            if (lastStatus !== "success") {
+                throw new InternalServerErrorException("Ollama pull did not complete successfully");
+            }
 
             db.prepare(`
-            INSERT INTO model (name, fullname, userGroup_idUserGroup) VALUES (?, ?, ?)    
+            INSERT INTO model (name, fullname, userGroup_idUserGroup) VALUES (?, ?, ?)
             `).run(modelName, modelFullName, idGroup);
 
-
+            console.log("Model added", modelFullName, "on group", groupName);
             return "Model added successfully!"
-
-
 
         } catch (err) {
             console.error("Error occured while adding model:", err);
+
+            if (err instanceof ConflictException) throw err;
+            if (err?.cause?.code === "UND_ERR_HEADERS_TIMEOUT") {
+                throw new InternalServerErrorException("Internal server error: Adding model failed");
+            }
             throw new InternalServerErrorException("Internal server error: Adding model failed");
         }
 
@@ -294,10 +305,10 @@ ON groupMember.user_idUser = user.idUser
 WHERE idUser = ?
 
 /* By userGroup id */
-AND idUserGroup = ?    
+AND idUserGroup = ?
         `).all(idUser, idUserGroup);
         console.log("Result of isUserGroup:", isUserGroup);
-    
+
         if (!isUserGroup) {
             throw new BadRequestException("You are not a member of", group.name);
         }

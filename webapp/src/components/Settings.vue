@@ -1,11 +1,21 @@
 <script setup>
-import { defineEmits, ref } from 'vue';
+import { defineEmits, nextTick, onMounted, ref } from 'vue';
 
-const emit = defineEmits(["openSettings", "updateSelectedGroup"]);
+const emit = defineEmits(["openSettings", "updateModels"]);
 
 function handleSettingsMenu() {
     emit("openSettings");
 }
+
+
+const models = ref([]);
+const groups = ref([]);
+const selectedGroup = ref({});
+const addName = ref("");
+const addFullName = ref("");
+const responseAddModel = ref("");
+const editMode_models = ref(false);
+const selectedModels = ref([]);
 
 // fetch groups accessible by user (userGroup contains models)
 async function fetchUserGroup() {
@@ -16,21 +26,21 @@ async function fetchUserGroup() {
         }
     })
 
-    const groupsRes = await res.json()
+    const groupsRes = await res.json();
 
     groups.value=groupsRes;
-    
-    selectedGroup.value = await groupsRes[0];
+
+    selectedGroup.value = groupsRes[0];
     console.log("Selected group:", groupsRes[0]);
 
-    console.log("UserGroups: \n", await groups.value);
+    console.log("UserGroups: \n", groups.value);
 }
 
-fetchUserGroup();
 
 async function fetchModelsByGroup() {
-    
-    console.log("selectedGroup id: \n", selectedGroup.value.userGroup_idUserGroup)
+
+    // debug
+    // console.log("selectedGroup id: \n", selectedGroup.value.userGroup_idUserGroup)
 
     const body = {
         group: {
@@ -49,13 +59,19 @@ async function fetchModelsByGroup() {
 
     models.value = await res.json();
 
-    console.log("models: \n", await models.value);
+    // debug
+    console.log("In Settings: models: \n", await models.value);
 
-    emit("updateSelectedGroup", models.value); // emit to parent to pass from parent to OpenThread, this allows the list of models to be displayed
+    emit("updateModels", models.value); // emit to parent to pass from parent to OpenThread, this allows the list of models to be displayed
 }
 
+
 async function addModelToGroup() {
-    responseAddModel("Loading...");
+    responseAddModel.value="Loading...";
+
+
+
+
     const body = {
         model: {
                 name: addName.value,
@@ -75,17 +91,37 @@ async function addModelToGroup() {
         body: JSON.stringify(body)
     })
     const data = await res;
-    responseAddModel.value=await data;
+
+
+    while (!data) {
+        for (let i in 3) {
+            setInterval(responseAddModel.value="Loading","."*i, 1000)
+        }
+    }
+
+
+
+
+
+    responseAddModel.value=data;
     console.log("Result of adding model:", await data);
 }
 
-const models = ref([]);
-const groups = ref([]);
-const selectedGroup = ref({});
-const addName = ref("");
-const addFullName = ref("");
+function toggleEditMode() {
+    editMode_models.value = !editMode_models.value;
+}
 
-const responseAddModel = ref("");
+function deleteSelectedModels() {
+    console.log("Deleting models: \n", selectedModels.value);
+}
+
+onMounted(async () => {
+    nextTick();
+    await fetchUserGroup();
+    await fetchModelsByGroup();
+
+});
+
 
 </script>
 
@@ -97,20 +133,28 @@ const responseAddModel = ref("");
                 <button id="close-btn" @click="handleSettingsMenu">x</button></li>
             <li class="flex-column">
                 <h2>Models</h2>
+
                 <div class="flex-row">
                     <table class="table">
                         <thead>
                             <tr>
                                 <th>Name</th>
                                 <th>Full Name</th>
-                                <th>Status</th>
+                                <th v-if="!editMode_models">Status</th>
+                                <th v-if="editMode_models"><button @click="deleteSelectedModels">Delete</button></th>
+                                <th><button @click="toggleEditMode">...</button></th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="(model, index) in models" :key="index">
+                            <tr v-if="!editMode_models" v-for="(model, index) in models" :key="index">
                                 <th>{{ model.modelName }}</th>
                                 <th>{{ model.modelFullName }}</th>
                                 <th><div class="status-ready"></div></th>
+                            </tr>
+                            <tr v-if="editMode_models" v-for="(model, index) in models" :key="index">
+                                <th>{{ model.modelName }}</th>
+                                <th>{{ model.modelFullName }}</th>
+                                <th><input type="checkbox" v-model="selectedModels" :value="model" :key="index"></th>
                             </tr>
                             <tr>
                                 <th><input type="text" name="" id="modelName" placeholder="name" v-model="addName"></th>
@@ -157,7 +201,7 @@ h1 {
 }
 #settings-menu {
     width: 100%;
-    max-width: 800px;
+
     height: 100%;
 
     background-color: #171A21;
@@ -244,5 +288,17 @@ h1 {
     background: transparent;
     border: none;
 
+}
+
+@media screen and (max-width: 1500px) {
+  .fill {
+    padding: $space;
+  }
+}
+
+@media screen and (max-height: 800px) {
+  .fill {
+    padding: $space;
+  }
 }
 </style>

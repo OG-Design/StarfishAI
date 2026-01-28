@@ -8,7 +8,7 @@ import type thread from '../../../types/thread';
 
 const props = defineProps<{threadsAvailable: thread[]}>()
 
-const emit = defineEmits(['openThread', 'updateThreadsAvailable']);
+const emit = defineEmits(['openThread', 'updateThreadsAvailable', 'updateModels']);
 
 console.log(props.threadsAvailable);
 
@@ -31,9 +31,10 @@ function handleOpenThread(i: number) {
     const idThread = thread.idThread; // to reference the thread to find
     // console.log(title);
 
-    selectedThread.value=idThread
+    selectedThread.value=thread;
 
     emit('openThread', thread);
+    emit('updateModels');
 }
 
 async function handleCreateThread () {
@@ -116,7 +117,7 @@ async function handleDeleteThreads() {
         <!-- If editmode is active -->
         <template v-else>
 
-            <div class="flex-row">
+            <div class="flex-row override">
                 <button @click="handleEditMode">...</button>
                 <button class="delete-button" @click="handleDeleteThreads">Delete</button>
             </div>
@@ -158,8 +159,6 @@ $space: 1rem;
 
     margin-left: calc($space / 2);
 
-
-
     border-radius: $border-radius;
 
     background-color: #171A21;
@@ -191,7 +190,7 @@ $space: 1rem;
 
     .flex-row {
 
-        width: calc(100% - $space);
+        width: calc(100%);
 
         display: flex;
         flex-direction: row;
@@ -199,13 +198,21 @@ $space: 1rem;
         align-items: start;
 
         gap: $space;
-        padding: $space;
+        padding: calc($space * 2);
+        padding-top: 0;
         padding-bottom: 0;
 
     }
 
+    .override {
+        width: calc(100% - $space * 2);
+
+        margin: calc($space);
+        margin-top: 0;
+    }
+
     .menu-child {
-        width: 100%;
+        width: calc(100% - $space * 2);
         height: fit-content;
 
         display: flex;

@@ -16,7 +16,7 @@ permissionLevel = permissionLevel from userGroup
 */
 
 /* Selects userdata, groupMembers of userGroups and their permissions */
-SELECT idGroupMember, name, permissionLevel, username, userGroup_idUserGroup, user_idUser 
+SELECT idGroupMember, name, permissionLevel, username, userGroup_idUserGroup, user_idUser
 FROM groupMember
 INNER JOIN userGroup -- join userGroup's (the permission level groups)
 ON groupMember.userGroup_idUserGroup = userGroup.idUserGroup

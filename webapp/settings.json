@@ -1,0 +1,16 @@
+{
+    "ai": {
+        "remote": {
+            "models": [
+
+            ],
+            "selectedModel":{}
+        },
+        "local": {
+            "models": [
+
+            ],
+            "selectedModel":{}
+        }
+    }
+}

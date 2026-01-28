@@ -50,7 +50,7 @@ export class AuthService {
 
     isAuth(session: Record<string, any>): object {
         const user = session.user;
-        console.log("Session check ", session);
+        // console.log("Session check ", session);
         console.log("Session user", user);
 
 

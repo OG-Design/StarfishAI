@@ -264,6 +264,8 @@ console.log("Models: \n", models);
       <!-- Prints the latest message -->
       <li v-if="currentMessage" class="message markdown-content" v-html="md.render(currentMessage)">
       </li>
+      <div v-if="isLoading">loading...</div>
+      <div v-else></div>
     </ul>
 
     <!-- Prompt elements -->
