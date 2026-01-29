@@ -7,6 +7,8 @@ import ollama from 'ollama';
 import Database from 'better-sqlite3';
 import { request } from 'http';
 
+import { ConfigService } from '@nestjs/config';
+
 const db = new Database(process.cwd()+"/starfish.db");
 
 function parseJsonFromString(str: string): any | null {
@@ -25,6 +27,12 @@ function parseJsonFromString(str: string): any | null {
 
 @Injectable()
 export class AiService {
+
+    constructor(private readonly config: ConfigService) {};
+
+    getOllamaEndpoint() {
+        return this.config.get<string>('OLLAMA_URL');
+    }
 
     // make threads
     createThread(session: any) {

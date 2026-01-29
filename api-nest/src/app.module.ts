@@ -10,9 +10,20 @@ import { AuthModule } from './auth/auth.module';
 import { AiController } from './ai/ai.controller';
 import { AiService } from './ai/ai.service';
 import { ChateventGateway } from './chatevent/chatevent.gateway';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [UserModule, AuthModule],
+  imports: [
+    UserModule,
+    AuthModule,
+    // for dev: ../../../.env.development
+    // for prod: ../../../.env.production
+    ConfigModule.forRoot({
+      envFilePath: `../../../.env.${process.env.NODE_ENV}`,
+      isGlobal: true,          // Make ConfigService accessible everywhere
+      ignoreEnvFile: false, // keeps .env from loading defaults
+    })
+  ],
   controllers: [AppController, UserController, AuthController, AiController],
   providers: [AppService, UserService, AuthService, AiService, ChateventGateway],
 })
