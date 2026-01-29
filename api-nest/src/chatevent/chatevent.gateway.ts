@@ -1,5 +1,6 @@
 const PORT_WEBAPP = 5173;
-const ADRESS_HOST = "http://192.168.1.11";
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS;
+
 import { Session, Body, UnauthorizedException} from '@nestjs/common';
 import { SubscribeMessage, WebSocketGateway, MessageBody, ConnectedSocket } from '@nestjs/websockets';
 
@@ -10,17 +11,19 @@ import { ConfigService } from '@nestjs/config';
 
 import Database from 'better-sqlite3';
 
-const db = new Database(process.cwd()+"/starfish.db");
+import db from '../db';
+
+
+
 
 import { Socket } from 'socket.io';
 import { Ollama } from 'ollama';
 import { S } from 'ollama/dist/shared/ollama.1bfa89da.cjs';
 
 
-
 @WebSocketGateway({
   cors: {
-    origin: [`${ADRESS_HOST}:${PORT_WEBAPP}`, "http://localhost:5173"], // change cors
+    origin: [ALLOWED_ORIGINS], // change cors
     credentials: true
   }
 })
@@ -28,13 +31,6 @@ export class ChateventGateway {
   private readonly ollamaURL:string;
   constructor(private readonly config: ConfigService) {
     this.ollamaURL = this.config.get<string>('OLLAMA_URL') ?? "";
-  }
-
-
-
-  getOllamaEndpoint() {
-    console.log("OLLAMA_URL:", this.config.get<string>('OLLAMA_URL'));
-    return
   }
 
   @SubscribeMessage('prompt')
@@ -46,9 +42,11 @@ export class ChateventGateway {
     },
     @ConnectedSocket() client: Socket,
   ) {
+
+
+
+    console.log("db path:",process.env.DB_PATH);
     console.log("Connection open on ChateventGateway, running for thread", data.thread)
-
-
 
     const message = data.message;
     const thread = data.thread;
@@ -124,7 +122,7 @@ export class ChateventGateway {
       if (!stream) {
         client.emit('error', (err: any) => {
           console.error("Stream error:", err);
-        })
+        });
       }
 
 

@@ -19,7 +19,11 @@ import { ConfigModule } from '@nestjs/config';
     // for dev: ../../../.env.development
     // for prod: ../../../.env.production
     ConfigModule.forRoot({
-      envFilePath: `../../../.env.${process.env.NODE_ENV}`,
+      envFilePath: [
+        `../.env.${process.env.NODE_ENV ?? 'development'}`,
+        '../.env',
+        '../.env.secret'
+      ],
       isGlobal: true,          // Make ConfigService accessible everywhere
       ignoreEnvFile: false, // keeps .env from loading defaults
     })

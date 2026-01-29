@@ -6,7 +6,7 @@ import { secretJWT } from 'src/secretJWT';
 import * as bcrypt from 'bcrypt';
 import Database from 'better-sqlite3';
 
-const db = new Database(process.cwd()+"/starfish.db");
+import db from '../db';
 
 const saltRounds: number = 10;
 

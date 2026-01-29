@@ -9,7 +9,7 @@ import { request } from 'http';
 
 import { ConfigService } from '@nestjs/config';
 
-const db = new Database(process.cwd()+"/starfish.db");
+import db from '../db';
 
 function parseJsonFromString(str: string): any | null {
     const match = str.match(/{[\s\S]*}/);

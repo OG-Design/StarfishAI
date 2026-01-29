@@ -5,7 +5,7 @@ import Database from 'better-sqlite3';
 
 console.log(process.cwd()+"/starfish.db");
 
-const db = new Database(process.cwd()+"/starfish.db");
+import db from '../db';
 
 const saltRounds: number = 10;
 

@@ -3,8 +3,8 @@ import vue from '@vitejs/plugin-vue'
 
 // https://vite.dev/config/
 export default defineConfig(({mode})=>{
-  const env = loadEnv(mode, process.cwd(), 'VITE_');
-  const target = env.VITE_API_TARGET || "http://localhost:3000" ;
+  const env = loadEnv(mode, process.cwd()+"../");
+  const API_URL = env.API_URL || "" ; // FIX!
   return {
     plugins: [vue()],
     server: {
@@ -12,12 +12,12 @@ export default defineConfig(({mode})=>{
       host: '0.0.0.0',
       proxy: {
         '/api': {
-          target,
+          API_URL,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, '')
         },
         '/socket.io': {
-        target,
+        API_URL,
         ws: true,
         changeOrigin: true
         }
