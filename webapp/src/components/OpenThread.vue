@@ -6,7 +6,6 @@ import MarkdownIt from 'markdown-it';
 
 import { sendPrompt, aiChunks, socket } from '../composables/useSocket';
 
-
 const md = new MarkdownIt();
 
 const props = defineProps<{title: string, index: number, idThread: number, models: any[]}>();
@@ -17,6 +16,13 @@ const messages = ref<any[]>([]);
 const personality = ref<string>('');
 
 const emit = defineEmits(['updateThreadTitle']);
+
+/*
+  reset aiChunks value so each time OpenThread is opened it gives a clear value,
+  e.g while having a finished prompt in one thread and switching to another it-
+  -won't flow over to the other thread.
+*/
+aiChunks.value=[];
 
 onMounted(async () => {
 
@@ -122,7 +128,7 @@ function handlePrompt() {
   // log chunks
   console.log(aiChunks);
 
-  
+
 
   // on ai_complete
   socket.once('ai_complete', () => {
@@ -231,10 +237,6 @@ console.log("Models: \n", models);
     <!-- The title of the thread -->
     <div id="top-menu">
       <input type="text" v-model="threadTitle" @change="handleThreadChange" :style="{width: (title.length || 10) + 'ch'}">
-      <select name="" id="models" v-model="currentModel">
-        <option v-for="(model, index) in models" :key="index" :value="model">{{model.modelName}}</option>
-      </select>
-
     </div>
 
     <!-- List of messages -->
@@ -268,6 +270,11 @@ console.log("Models: \n", models);
       <div v-else></div>
     </ul>
 
+    <div id="model-selector">
+      <select name="" id="models" v-model="currentModel">
+        <option v-for="(model, index) in models" :key="index" :value="model">{{model.modelName}}</option>
+      </select>
+    </div>
     <!-- Prompt elements -->
     <form id="prompt" @submit.prevent="handlePrompt">
       <textarea type="text" name="send-message" v-model="prompt"></textarea>
@@ -473,6 +480,12 @@ $space: 1rem;
   border: 1px solid #646cff;
 }
 
+#model-selector {
+  position: absolute;
+  width: 100px;
+  bottom: 20%;
+  padding-left: calc($space * 2);
+}
 
 // Markdown styling
 .markdown-content {
