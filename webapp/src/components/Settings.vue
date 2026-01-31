@@ -92,17 +92,6 @@ async function addModelToGroup() {
     })
     const data = await res;
 
-
-    while (!data) {
-        for (let i in 3) {
-            setInterval(responseAddModel.value="Loading","."*i, 1000)
-        }
-    }
-
-
-
-
-
     responseAddModel.value=data;
     console.log("Result of adding model:", await data);
 }
@@ -130,7 +119,8 @@ onMounted(async () => {
         <ul id="settings-menu">
             <li id="settings-header">
                 <h1>Settings</h1>
-                <button id="close-btn" @click="handleSettingsMenu">x</button></li>
+                <button id="close-btn" @click="handleSettingsMenu">x</button>
+            </li>
             <li class="flex-column">
                 <h2>Models</h2>
 

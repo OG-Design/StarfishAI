@@ -10,7 +10,16 @@ const md = new MarkdownIt();
 
 const props = defineProps<{title: string, index: number, idThread: number, models: any[]}>();
 
-// console.log(props);
+import type { ModelOption } from '../types/ModelOption';
+
+
+// define referene for the title
+const threadTitle = ref(props.title);
+const models = ref<ModelOption[]>(props.models as ModelOption[]);
+
+const currentModel = ref<ModelOption | null>(models.value[0] ?? null);
+const stored = localStorage.getItem("selectedModel");
+currentModel.value = stored ? JSON.parse(stored) as ModelOption : null;
 
 const messages = ref<any[]>([]);
 const personality = ref<string>('');
@@ -97,6 +106,8 @@ const currentMessage = computed(()=>aiChunks.value.join(''));
 // handles the users prompt and refreshes messages in the open thread
 function handlePrompt() {
 
+  if(!currentModel.value) return console.log("No model selected"); // check if current model exists
+
   // scroll to bottom
   scrollToBottom();
 
@@ -154,8 +165,6 @@ function handlePrompt() {
 
 
 
-// define referene for the title
-const threadTitle = ref(props.title);
 
 // changes title of thread
 async function handleThreadChange() {
@@ -221,13 +230,15 @@ watch([messages, currentMessage], () => {
   scrollToBottom();
 });
 
-// replace by API provided model list
-const models = ref(props.models)
-const currentModel = ref(models.value[0]);
 
 console.log(props.models)
 console.log("Models: \n", models);
 
+// store the selected model in localStorage to keep for reload and other threads.
+function handleUpdateSelectedModel() {
+  localStorage.setItem("selectedModel", JSON.stringify(currentModel.value));
+  console.log(localStorage.getItem("selectedModel"));
+}
 
 
 </script>
@@ -271,7 +282,7 @@ console.log("Models: \n", models);
     </ul>
 
     <div id="model-selector">
-      <select name="" id="models" v-model="currentModel">
+      <select name="" id="models" v-model="currentModel" @click="handleUpdateSelectedModel">
         <option v-for="(model, index) in models" :key="index" :value="model">{{model.modelName}}</option>
       </select>
     </div>

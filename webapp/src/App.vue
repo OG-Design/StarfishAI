@@ -4,9 +4,8 @@ import ThreadsMenu from './components/ThreadsMenu.vue'
 import OpenThread from './components/OpenThread.vue';
 import Login from './components/Login.vue';
 import Settings from './components/Settings.vue';
-
-
 import TopMenu from './components/TopMenu.vue';
+
 
 import {ref} from 'vue'
 
@@ -27,6 +26,15 @@ const threadsAvailable = ref<thread[]>([]);
 // creates reference selectedThread
 const selectedThread = ref();
 selectedThread.value = {idThread:0};
+
+
+const storedModels = localStorage.getItem("models");
+const storedSelectedGroup = localStorage.getItem("selectedGroup");
+
+const models:any = ref(storedModels ? JSON.parse(storedModels) : []);
+const groups = ref([]);
+const selectedGroup:any = ref(storedSelectedGroup ? JSON.parse(storedSelectedGroup): []);
+
 
 // fetch all threads available to user
 async function getAllThreads() {
@@ -126,9 +134,6 @@ function updateModels(payload: any) {
   }
 
 
-
-
-
 }
 
 
@@ -188,13 +193,6 @@ async function fetchModelsByGroup() {
     console.log("Selected group:", selectedGroup.value);
 }
 
-const storedModels = localStorage.getItem("models");
-const storedSelectedGroup = localStorage.getItem("selectedGroup");
-
-
-const models:any = ref(storedModels ? JSON.parse(storedModels) : []);
-const groups = ref([]);
-const selectedGroup:any = ref(storedSelectedGroup ? JSON.parse(storedSelectedGroup): []);
 
 console.log("LocalStorage: \n", localStorage.getItem("models"), "\n", localStorage.getItem("selectedGroup"));
 
