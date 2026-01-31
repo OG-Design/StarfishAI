@@ -331,13 +331,42 @@ $space: 1rem;
   }
 }
 
-#top-area {
-  height: 10%;
-  width: 100%;
-
-  position: absolute;
+#top-menu {
+  height: fit-content;
+  width: fit-content;
+  position: fixed;
   z-index: 10;
-  top: 0;
+  top: calc($space * 2);
+
+
+
+  input {
+    height: 100%;
+    min-width: 200px;
+
+    font-size: 24px;
+
+    padding-left: $space;
+
+    background-color: transparent;
+    border: solid 1px hsla(237, 100%, 70%, .2);
+    border-radius: $border-radius;
+
+    background-color: hsla(237, 100%, 70%, .05);
+
+    backdrop-filter: blur(8px);
+
+    transition: .2s;
+
+    &:hover {
+      border-color: hsla(237, 100%, 70%, 1);
+    }
+
+  }
+
+
+  padding: $space;
+  box-sizing: border-box;
 
 }
 
@@ -370,7 +399,8 @@ $space: 1rem;
 
   margin: $space;
   margin-bottom: 0;
-  padding-bottom: $space;
+  padding-top: calc($space * 4);
+  padding-bottom: calc($space * 4);
   gap: calc($space * 5);
 
   box-sizing: border-box;
@@ -504,6 +534,31 @@ $space: 1rem;
   width: 100px;
   bottom: 20%;
   padding-left: calc($space * 2);
+
+  select {
+    height: 100%;
+    min-width: 200px;
+
+    font-size: 24px;
+
+    padding-left: $space;
+
+    background-color: transparent;
+    border: solid 1px hsla(237, 100%, 70%, .2);
+    border-radius: $border-radius;
+
+    background-color: hsla(237, 100%, 70%, .05);
+
+    backdrop-filter: blur(8px);
+
+    transition: .2s;
+
+    &:hover {
+      border-color: hsla(237, 100%, 70%, 1);
+    }
+
+  }
+
 }
 
 // Markdown styling
