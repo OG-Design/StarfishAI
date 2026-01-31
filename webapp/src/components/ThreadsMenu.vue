@@ -141,6 +141,8 @@ async function handleDeleteThreads() {
 $border-radius: 1rem;
 $space: 1rem;
 
+$shadow: 0px 0px 16px 0px rgba(0,0,0,.5);
+
 #thread-menu {
     // width: calc(12.5% - 2rem);
 
@@ -167,6 +169,8 @@ $space: 1rem;
     overflow-y: scroll;
     overflow-x: hidden;
 
+    box-shadow: $shadow;
+    z-index: 100;
 
     button {
         width: calc(100% - $space * 2);

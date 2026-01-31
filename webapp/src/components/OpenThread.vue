@@ -285,6 +285,8 @@ console.log("Models: \n", models);
 
 <style lang="scss">
 
+$shadow: 0px 0px 16px 0px rgba(0,0,0,.5);
+
 $border-radius: 1rem;
 
 $space: 1rem;
@@ -371,7 +373,7 @@ $space: 1rem;
 
   display: flex;
   flex-direction: row;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
 
   gap: $space;
@@ -380,9 +382,15 @@ $space: 1rem;
   // margin-right: calc($space / 2);
   margin-bottom: $space;
 
+  padding-left: $space;
+  padding-right: $space;
+
   border-radius: $border-radius;
 
   box-sizing: border-box;
+
+  // shadow
+  box-shadow: $shadow;
 
   textarea {
 

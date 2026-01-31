@@ -186,7 +186,7 @@ h1 {
     height: 100vh;
 
     position: absolute;
-    z-index: 100;
+    z-index: 101;
 
     padding: calc($space * 10);
     padding-left: calc($space * 25);
