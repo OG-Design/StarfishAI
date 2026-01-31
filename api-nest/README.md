@@ -159,19 +159,19 @@ getHello(): string {
 }
 ```
 
-The *@Get()* descriptor is responsible for serving a get request, in this case it is the root route of */*. So if a request is made to the API at */* it would respond with the *getHello()* function's response.
+The `@Get()` descriptor is responsible for serving a get request, in this case it is the root route of `/`. So if a request is made to the API at `/` it would respond with the `getHello()` function's response.
 
 The method body:
 ```ts
 this.appService.getHello();
 ```
-This references the constructor and so the calls the getHello() function.
+This references the constructor and so the calls the `getHello()` function.
 
 
 ### app.service.ts
 
 ### How the *getHello()* function works
-The function is imported as shown above and is inside *./src/app.service.ts*, which looks like this:
+The function is imported as shown above and is inside `./src/app.service.ts`, which looks like this:
 
 ```ts
 import { Injectable } from '@nestjs/common';
@@ -185,14 +185,14 @@ export class AppService {
 
 ```
 
-Injectable is imported from the nestjs common package like this. This is imported to help "Inject" the class AppService.
+Injectable is imported from the nestjs common package like this. This is imported to help "Inject" the class `AppService`.
 
 ```ts
 import { Injectable } from '@nestjs/common';
 
 ```
 
-This is the function *getHello()*. It simply returns 'Hello World!', this is what the app.controller.ts references in it's *@Get* decorator
+This is the function `getHello()`. It simply returns 'Hello World!', this is what the `app.controller.ts` references in it's `@Get` decorator
 
 ```ts
 getHello(): string {
@@ -267,7 +267,7 @@ This imports session from *express-session*
 import session from 'express-session';
 ```
 
-The code below initializes and uses the *session* variable. *app.use* tells the *NestFactory* or *app* to use *express-session* as a global session handler. Look at the comments of the session object for an explenation of what they do
+The code below initializes and uses the `session` variable. `app.use` tells the `NestFactory` or `app` to use `express-session` as a global session handler. Look at the comments of the session object for an explenation of what they do
 
 ```ts
 app.use(session({
@@ -284,7 +284,7 @@ app.use(session({
 
 ## The controller
 
-This is responsible for the route */auth*, it handles login and logout route requests. The logout is also responsible for destroying the session if it exists.
+This is responsible for the route `/auth`, it handles login and logout route requests. The logout is also responsible for destroying the session if it exists.
 
 ### ./src/auth/auth.controller.ts
 ```ts
@@ -337,7 +337,7 @@ export class AuthController {
 
 ### The login route
 
-The route to access login is */auth/login* due to the controller's path. It requires a *@Body()* decorator with a body containing objects *username*, *password*. It also uses the imported *@Req()* and *Request* defined as req. Res is similarly structured.  
+The route to access login is `/auth/login` due to the controller's path. It requires a *@Body()* decorator with a body containing objects `username`, `password`. It also uses the imported `@Req()` and `Request` defined as req. Res is similarly structured.  
 
 ```ts
 @Post('login')
@@ -357,13 +357,13 @@ The route to access login is */auth/login* due to the controller's path. It requ
     }
 ```
 
-The *user* variable defines a method that uses the *authService* => *validateUser* function. The function requires two parameters *username* & *password* to validate the users credentials.
+The `user` variable defines a method that uses the `authService` => `validateUser` function. The function requires two parameters `username` & `password` to validate the users credentials.
 
 ```ts
 const user: any = await this.authService.validateUser(body.username, body.password);
 ```
 
-The statement below checks the return value of *user*, if the user variable's credentials are incorrect it returns a response stating so.  
+The statement below checks the return value of `user`, if the user variable's credentials are incorrect it returns a response stating so.  
 
 ```ts
 if (!user) {
@@ -383,7 +383,7 @@ return res.json({ message: "Logged in successfully" });
 
 ### The logout route
 
-To access this route follow the same logic as in the login route so in this case */auth/logout*. It requires no input parameters, but defines *@Req()*, *Request*, *@Res()*, *Response* as in the login route.
+To access this route follow the same logic as in the login route so in this case `/auth/logout`. It requires no input parameters, but defines `@Req()`, `Request`, `@Res()`, `Response` as in the login route.
 
 ```ts
 @Post('logout')
@@ -419,7 +419,7 @@ req.session.destroy( (err) => {
 
 ## The service
 
-The service handles most of the login logic in its *validateUser* function. its external dependencies are *bcrypt* & *better-sqlite3*.
+The service handles most of the login logic in its `validateUser` function. its external dependencies are `bcrypt` & `better-sqlite3`.
 
 ### ./src/auth/auth.service.ts
 ```ts
@@ -469,14 +469,14 @@ The code below handles getting and saving the selected users data.
 const user: any = db.prepare('SELECT username, hash FROM user WHERE username = ?').get(username);
 ```
 
-Validation happens in the isValid variable. It uses the imported *bcrypt* package to compare the password input to the prepared *Database / db* outputs *hash*.
+Validation happens in the isValid variable. It uses the imported *bcrypt* package to compare the password input to the prepared `Database / db` outputs `hash`.
 
 ```ts
 const isValid = await bcrypt.compare(password, user.hash);
 ```
 
 
-To avoid unauthorized access it checks the condition of *isValid* in an if statement, if its triggered it throws a new error called an *UnauthorizedException*.
+To avoid unauthorized access it checks the condition of `isValid` in an if statement, if its triggered it throws a new error called an *UnauthorizedException*.
 
 ```ts
 if(!isValid) {
@@ -484,7 +484,7 @@ if(!isValid) {
 }
 ```
 
-If it passes the check above, it returns a value of *true* and allows the session creation to happen as shown in *./src/auth/auth.controller.ts*.
+If it passes the check above, it returns a value of `true` and allows the session creation to happen as shown in `./src/auth/auth.controller.ts`.
 
 ```ts
 return true;
@@ -492,7 +492,7 @@ return true;
 
 ## The session auth guard
 
-The session-auth guard is responsible for checking the sessions. This is imported in the scripts requireing authentication, one example of this is inside of the *./user/user.service.ts* script. Inside the user service it is used on the *delete* route, which is responsible for deleting users from the database.
+The session-auth guard is responsible for checking the sessions. This is imported in the scripts requireing authentication, one example of this is inside of the `./user/user.service.ts` script. Inside the user service it is used on the `delete` route, which is responsible for deleting users from the database.
 
 ---
 # **WIP**
@@ -519,3 +519,294 @@ export class SessionAuthGuard implements CanActivate {
   }
 }
 ```
+
+
+# **Websocket connection**
+
+This API user `Websocket's` to deliver live data, this as of writing this only includes streaming the responses to messages sent by the user, these are delivered in `chunks`. It uses a `Gateway` in `nestjs` to stream the data, here I also use `JTW's` to authenticate the stream and user's access to it. (*Stored in localStorage for now but that will change later due to security concerns*).
+
+## Quick explanation:
+
+This allows for websocket connections to the `ollama`.
+
+```ts
+const PORT_WEBAPP = 5173;
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS;
+
+import { Session, Body, UnauthorizedException} from '@nestjs/common';
+import { SubscribeMessage, WebSocketGateway, MessageBody, ConnectedSocket } from '@nestjs/websockets';
+
+import * as jwt from "jsonwebtoken";
+import { secretJWT } from "src/secretJWT";
+
+import { ConfigService } from '@nestjs/config';
+
+import Database from 'better-sqlite3';
+
+import db from '../db';
+
+
+
+
+import { Socket } from 'socket.io';
+import { Ollama } from 'ollama';
+import { S } from 'ollama/dist/shared/ollama.1bfa89da.cjs';
+
+
+@WebSocketGateway({
+  cors: {
+    origin: [ALLOWED_ORIGINS], // change cors
+    credentials: true
+  }
+})
+export class ChateventGateway {
+  private readonly ollamaURL:string;
+  constructor(private readonly config: ConfigService) {
+    this.ollamaURL = this.config.get<string>('OLLAMA_URL') ?? "";
+  }
+
+  @SubscribeMessage('prompt')
+  async handlePrompt(
+    @MessageBody() data: {
+      thread: number,
+      message: any,
+      model: string
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+
+
+
+    console.log("db path:",process.env.DB_PATH);
+    console.log("Connection open on ChateventGateway, running for thread", data.thread)
+
+    const message = data.message;
+    const thread = data.thread;
+    const model = data.model;
+
+    const token = client.handshake.auth.token;
+
+    console.log("Token received:", token, "Type:", typeof token);
+
+    // token type check
+    if(!token || typeof token !== 'string') {
+      console.error("Invalid or missing token");
+      client.emit('error', {message: 'Authentication failed'});
+      client.disconnect();
+      return
+    }
+
+    // verify token
+    const userToken = jwt.verify(token, secretJWT);
+
+    // check verification
+    if (!userToken) {
+      console.error("JWT not valid");
+      return new UnauthorizedException("Invalid JWT");
+    }
+
+    const idUser = userToken.idUser;
+    const thread_author = db.prepare('SELECT * FROM thread WHERE author_idUser = ? AND idThread = ? ').all(idUser, thread)
+
+    console.log(thread_author);
+
+    // check if author is valid
+    if (thread_author.length == 0) {
+      console.log("User ", userToken.username, "tried to access thread with id ", thread, ". They're not the author if the thread exists");
+      return "You own no threads with id "+ thread;
+    }
+
+
+    // store messages as context
+    let messages: any[] = [message];
+
+    // console.log(thread, "\n", messages);
+
+    db.prepare('INSERT INTO message (data, idThread) VALUES (?, ?)').run(JSON.stringify(message), thread);
+
+    const context = db.prepare('SELECT * FROM message WHERE idThread = ? ORDER BY rowid DESC LIMIT 25').all(thread);
+    const systemPrompt: any = db.prepare('SELECT * FROM message WHERE idThread = ? AND isSystem = 1').get(thread);
+
+
+    messages.push(JSON.parse(systemPrompt.data));
+    context.reverse().forEach((me: any) => {
+        try {
+          // console.log("message", me)
+        messages.push(JSON.parse(me.data));
+        } catch (e) {
+            console.error(e)
+        }
+    })
+
+    // console.log("ALL MESSAGES", messages);
+
+
+    // create new ollama and make connection via env
+    const ollamaClient = new Ollama({host: this.ollamaURL});
+
+    try {
+      const stream = await ollamaClient.chat({
+        model: model,
+        messages: messages,
+        stream: true
+      });
+
+      if (!stream) {
+        client.emit('error', (err: any) => {
+          console.error("Stream error:", err);
+        });
+      }
+
+
+      const allChunks: any[] = [];
+
+      // iterate over each chunk from ollamas streaming response
+      for await (const chunk of stream) {
+        const content = chunk.message.content; // get current chunk
+        if (content) {
+          client.emit('ai_chunk', content); // emit chunk to client
+          // debug: prints each chunk
+          // console.log(content);
+          allChunks.push(content);
+        }
+      }
+
+      // debug: display complete prompt
+      console.log("Complete stream:", allChunks.join(''));
+
+      // structure message
+      const messageResponse = {role:"assistant", content: allChunks.join('')};
+
+      // insert message into db
+      db.prepare("INSERT INTO message (data, idThread) VALUES (?, ?)").run(JSON.stringify(messageResponse), thread);
+
+      client.emit('ai_complete');
+    } catch (err) {
+      console.error("Ollama error:", err);
+      client.emit('error', {
+        message: err.error || 'Failed to process your request',
+        status_code: err.status_code || 500
+      });
+    }
+  }
+}
+
+```
+
+
+### @WebSocketGateway
+
+The WebSocketGateway decorator sets the properties of `CORS` in this example, it uses the ALLOWED_ORIGINS from `.env`
+
+```ts
+@WebSocketGateway({
+  cors: {
+    origin: [ALLOWED_ORIGINS], // change cors
+    credentials: true
+  }
+})
+```
+
+### ChateventGateway
+
+This is used to declare the class `ChateventGateway` it initializes `ollamaURL` as a string for later use within the class. The constructor uses `ConfigService` declared as `config` to set `ollamaURL` to `OLLAMA_URL` from the `.env` file. 
+
+```ts
+export class ChateventGateway {
+  private readonly ollamaURL:string;
+  constructor(private readonly config: ConfigService) {
+    this.ollamaURL = this.config.get<string>('OLLAMA_URL') ?? "";
+  }
+...existing code
+}
+```
+
+### SubscribeMessage
+
+This decorator is used to approve ws requests to `prompt` The `@MessageBody` takes in the data parameters shown below and uses them later. `@ConnectedSocket` is used to inject an instance of the socket into the gateway.
+
+```ts
+ @SubscribeMessage('prompt')
+  async handlePrompt(
+    @MessageBody() data: {
+      thread: number,
+      message: any,
+      model: string
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+  }
+  ...existing code
+```
+
+### token
+
+This gets the client's token.
+
+```ts
+const token = client.handshake.auth.token;
+``` 
+
+
+### userToken
+
+this is used to store the verification status of the token.
+
+```ts
+const userToken = jwt.verify(token, secretJWT);
+```
+
+later this is used to check the token's validity here
+
+```ts
+if (!userToken) {
+  console.error("JWT not valid");
+  return new UnauthorizedException("Invalid JWT");
+}
+```
+
+### Checking the author's claim to the thread they want to access
+
+This gets the author's thread.
+
+```ts
+const thread_author = db.prepare('SELECT * FROM thread WHERE author_idUser = ? AND idThread = ? ').all(idUser, thread)
+```
+
+This checks the author's claim to the thread they want to get context from and write to.
+
+```ts
+if (thread_author.length == 0) {
+  console.log("User ", userToken.username, "tried to access thread with id ", thread, ". They're not the author if the thread exists");
+  return "You own no threads with id "+ thread;
+}
+```
+
+### Getting and storing context
+
+```ts
+// store messages as context
+let messages: any[] = [message];
+
+// console.log(thread, "\n", messages);
+
+db.prepare('INSERT INTO message (data, idThread) VALUES (?, ?)').run(JSON.stringify(message), thread);
+
+const context = db.prepare('SELECT * FROM message WHERE idThread = ? ORDER BY rowid DESC LIMIT 25').all(thread);
+const systemPrompt: any = db.prepare('SELECT * FROM message WHERE idThread = ? AND isSystem = 1').get(thread);
+
+
+messages.push(JSON.parse(systemPrompt.data));
+context.reverse().forEach((me: any) => {
+    try {
+      // console.log("message", me)
+    messages.push(JSON.parse(me.data));
+    } catch (e) {
+        console.error(e)
+    }
+})
+```
+
+**What is happening?**
+
+The `messages` variable is declared to stored the messages retrieved from the `db`   
