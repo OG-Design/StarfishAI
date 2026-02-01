@@ -4,7 +4,7 @@ This API uses `Websockets` to deliver live data, this as of writing this only in
 
 ## Quick explanation:
 
-This allows for websocket connections to the `ollama`.
+This allows for websocket connections to the `ollama`. Below is a code block, beneath it is a more complete explanation of how it works.
 
 ```ts
 const PORT_WEBAPP = 5173;
@@ -227,13 +227,13 @@ const token = client.handshake.auth.token;
 
 ### userToken
 
-this is used to store the verification status of the token.
+This is used to store the verification status of the token.
 
 ```ts
 const userToken = jwt.verify(token, secretJWT);
 ```
 
-later this is used to check the token's validity here
+Later this is used to check the token's validity here
 
 ```ts
 if (!userToken) {
@@ -328,6 +328,6 @@ try {
 ...existing code
 ```
 
-**What is happening**
+**What is happening?**
 
 `ollamaClient` is declared to make a connection to `Ollama` Ollama uses a `host` parameter derived from the `.env` file's `OLLAMA_URL`. `stream` then uses `ollamaClient` to chat. It checks if there is a stream and emits an error if there isn't, otherwise it starts streaming and pushes the `content` of the stream live. For each chunk of the stream it emits the result and pushes it to the `allChunks` array so it is stored to be inserted into the `db` later on.

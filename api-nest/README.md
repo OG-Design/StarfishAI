@@ -69,7 +69,7 @@ Run the content of this SQL script [starfish.db.sql](./starfish.db.sql) in `sqli
 - [`.env.secret.production`](../.env.secret.production)
 
 ## Run the API
-By default this will run on port `:3000`, change this in [vite.config.ts](vite.config.ts) aswell as in the backends [PORT](../api-nest/src/main.ts). It also runs on `http://localhost`, so if you get cross origin problems try to change it in [vite.config.ts](vite.config.ts), aswell as in the backends [ADDRESS_HOST](../api-nest/src/chatevent/chatevent.gateway.ts)
+By default this will run on port `3000` referenced as `API_PORT`, change this in [.env](../.env), or [.env.production](../.env.production) based on the environment. It also runs on `http://localhost`, so if you get cross origin problems try to change it in [.env](../.env) or [.env.production](../.env.production) referenced as `ALLOWED_ORIGINS`.
 
 ## Compile and run the project
 
