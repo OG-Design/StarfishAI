@@ -1,7 +1,5 @@
 import { Injectable, InternalServerErrorException, Session, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import * as sqlite3 from 'better-sqlite3';
-import Database from 'better-sqlite3';
 
 console.log(process.cwd()+"/starfish.db");
 

@@ -3,7 +3,6 @@ import { Controller, Get, Post, Param, Body, Session, UseGuards} from '@nestjs/c
 import { SessionAuthGuard } from 'src/auth/session-auth.guard';
 
 import { AiService } from './ai.service';
-import session from 'express-session';
 
 @Controller('ai')
 @UseGuards(SessionAuthGuard)

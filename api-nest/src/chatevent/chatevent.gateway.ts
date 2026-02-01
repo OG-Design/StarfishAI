@@ -9,8 +9,6 @@ import { secretJWT } from "src/secretJWT";
 
 import { ConfigService } from '@nestjs/config';
 
-import Database from 'better-sqlite3';
-
 import db from '../db';
 
 
@@ -18,7 +16,7 @@ import db from '../db';
 
 import { Socket } from 'socket.io';
 import { Ollama } from 'ollama';
-import { S } from 'ollama/dist/shared/ollama.1bfa89da.cjs';
+import { threadId } from 'worker_threads';
 
 
 @WebSocketGateway({
@@ -59,6 +57,7 @@ export class ChateventGateway {
     // token type check
     if(!token || typeof token !== 'string') {
       console.error("Invalid or missing token");
+      console.log("Token:", token)
       client.emit('error', {message: 'Authentication failed'});
       client.disconnect();
       return
@@ -140,7 +139,8 @@ export class ChateventGateway {
       }
 
       // debug: display complete prompt
-      console.log("Complete stream:", allChunks.join(''));
+      // console.log("Complete stream:", allChunks.join(''));
+      console.log("Message completed at thread with author, thread + author:", thread_author);
 
       // structure message
       const messageResponse = {role:"assistant", content: allChunks.join('')};
