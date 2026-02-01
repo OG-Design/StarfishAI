@@ -1,6 +1,19 @@
 # **Starfish API**
-### WIP
-This api handles all traffic from the frontend, it handles ollama's api with history and saves and returns it to the user in a structured way.
+
+## Table of Contents
+
+1. [Intro](#intro)
+2. [Prerequisites & compatibility](#prerequisites--compatibility)
+3. [Getting started](#getting-started)
+4. [How the API is strucured](#how-the-api-is-structured)
+5. [How it works](#how-it-works)
+6. [Authentication](#authentication)
+7. [Websocket connection](#websocket-connection)
+
+
+
+# Intro
+This api handles all traffic from the frontend, it handles ollama's api with history and saves and returns it to the user in a structured way. First we have a general overview of the [prerequisites & compatibility](#prerequisites--compatibility) which involves all the software and ports you need to run the API. Next is [Getting started](#getting-started) which helps you get up and running. Then we have a helpfull diagram in [How the API is structured](#how-the-api-is-structured) that helps visualize the API's structure. In the [How it works](#how-it-works) section you will get an overview and a greneral explanation of how parts of `NestJS` works. Further down you will find important parts of the API explained, this includes things like [Authentication](#authentication), [Websocket connection](#websocket-connection), more will be added at a later date.
 
 # Prerequisites & compatibility
 
@@ -227,7 +240,7 @@ export class AppModule {}
 
 ---
 
-## **Authentication**
+# **Authentication**
 
 ## Session
 The session handler is responsible for handling sessions, it is used to keep data on authenticated user sessions, and prevent unauthenticated access through the *guard* logic shown further down.
@@ -520,6 +533,7 @@ export class SessionAuthGuard implements CanActivate {
 }
 ```
 
+---
 
 # **Websocket connection**
 
@@ -782,6 +796,8 @@ if (thread_author.length == 0) {
 }
 ```
 
+---
+
 ### Getting and storing context
 
 ```ts
@@ -809,4 +825,48 @@ context.reverse().forEach((me: any) => {
 
 **What is happening?**
 
-The `messages` variable is declared to stored the messages retrieved from the `db`   
+The `messages` variable is declared to store the messages retrieved from the `db`. The result of the db queries are then pushed to `messages`.   
+
+---
+
+### Running the model and streaming the data
+
+```ts 
+// create new ollama and make connection via env
+const ollamaClient = new Ollama({host: this.ollamaURL});
+
+try {
+  const stream = await ollamaClient.chat({
+    model: model,
+    messages: messages,
+    stream: true
+  });
+
+  if (!stream) {
+    client.emit('error', (err: any) => {
+      console.error("Stream error:", err);
+    });
+  }
+
+
+  const allChunks: any[] = [];
+
+  // iterate over each chunk from ollamas streaming response
+  for await (const chunk of stream) {
+    const content = chunk.message.content; // get current chunk
+    if (content) {
+      client.emit('ai_chunk', content); // emit chunk to client
+      // debug: prints each chunk
+      // console.log(content);
+      allChunks.push(content);
+    }
+  }
+}
+...existing code
+```
+
+**What is happening**
+
+`ollamaClient` is declared to make a connection to `Ollama` Ollama uses a `host` parameter derived from the `.env` file's `OLLAMA_URL`. `stream` then uses `ollamaClient` to chat. It checks if there is a stream and emits an error if there isn't, otherwise it starts streaming and pushes the `content` of the stream live. For each chunk of the stream it emits the result and pushes it to the `allChunks` array so it is stored to be inserted into the `db` later on.
+
+---
