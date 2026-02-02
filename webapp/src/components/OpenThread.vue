@@ -196,10 +196,7 @@ async function handleThreadChange() {
 }
 
 
-
-
-
-
+// sends the personality e.g the system prompt to the API
 async function handlePersonalityChange() {
   const body = {
     thread: thread,
@@ -223,7 +220,6 @@ function scrollToBottom() {
     threadList.value.scrollTop = threadList.value.scrollHeight;
   }
 }
-
 
 // watch messages vs currentMessage for changes and scroll
 watch([messages, currentMessage], () => {
@@ -289,12 +285,14 @@ function handleUpdateSelectedModel() {
     <!-- Prompt elements -->
     <form id="prompt" @submit.prevent="handlePrompt">
       <textarea type="text" name="send-message" v-model="prompt"></textarea>
-      <button type="submit" :disabled="isLoading">Send</button>
+      <div>
+        <button type="submit" :disabled="isLoading">Send</button>
+      </div>
     </form>
   </main>
 </template>
 
-<style lang="scss">
+<style lang="scss" >
 
 $shadow: 0px 0px 16px 0px rgba(0,0,0,.5);
 
@@ -334,11 +332,12 @@ $space: 1rem;
 #top-menu {
   height: fit-content;
   width: fit-content;
-  position: fixed;
+  position: absolute;
   z-index: 10;
+  margin-left: $space;
   top: calc($space * 2);
-
-
+  padding: $space;
+  box-sizing: border-box;
 
   input {
     height: 100%;
@@ -364,21 +363,16 @@ $space: 1rem;
 
   }
 
-
-  padding: $space;
-  box-sizing: border-box;
-
 }
 
 #thread-main {
-
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
 
-
   margin: 0;
-
-  margin-top: 10px; /* fix for title area */
 
   grid-area: thread;
 
@@ -386,7 +380,6 @@ $space: 1rem;
 }
 
 #thread {
-  min-width: calc(100% - $space * 2);
   height: calc(100% - $space * 2);
   width: calc(100% - $space * 2);
 
@@ -395,11 +388,12 @@ $space: 1rem;
   justify-content: start;
   align-items: start;
 
-  overflow: scroll;
+  overflow-y: scroll;
 
   margin: $space;
   margin-bottom: 0;
-  padding-top: calc($space * 4);
+  margin-top: 0;
+  padding-top: calc($space * 5);
   padding-bottom: calc($space * 4);
   gap: calc($space * 5);
 
@@ -457,8 +451,18 @@ $space: 1rem;
 
   }
 
+
+  $btn-size: 75px;
+  $btn-size-increased: calc($btn-size * 1.05);
+  div {
+    width: calc($btn-size-increased + $space);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
   button {
-    $btn-size: 75px;
+
 
     width: $btn-size;
     height: $btn-size;
@@ -471,10 +475,10 @@ $space: 1rem;
     font-weight: 600;
 
     &:hover {
-      
 
-      width: calc($btn-size * 1.05);
-      height: calc($btn-size * 1.05);
+
+      width: $btn-size-increased;
+      height: $btn-size-increased;
 
       background-color: hsla(240, 100%, 74%, 50%);
       cursor: pointer;
@@ -497,7 +501,7 @@ $space: 1rem;
 
 }
 .message {
-  width: 70%;
+  min-width: none;
   max-width: 70%;
   list-style-type: none;
   offset: 0;
@@ -513,6 +517,7 @@ $space: 1rem;
 
   transition: .2s;
 
+
 }
 
 .message:hover {
@@ -520,7 +525,8 @@ $space: 1rem;
 }
 
 .message-user {
-  width: 70%;
+
+  min-width: none;
   max-width: 70%;
   align-self: flex-end;
   justify-items: end;
@@ -594,6 +600,9 @@ $space: 1rem;
     border-radius: 4px;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     font-size: 0.9em;
+
+    overflow: scroll;
+
   }
 
   pre {
@@ -601,7 +610,8 @@ $space: 1rem;
     border: 1px solid #2a4a5e;
     border-radius: 6px;
     padding: 1rem;
-    overflow-x: auto;
+    overflow-x: scroll;
+    width: calc(100% - $space * 2);
     margin: 1rem 0;
 
     code {
@@ -670,12 +680,15 @@ $space: 1rem;
         padding: 0.75rem;
         text-align: left;
         border-bottom: 2px solid #4fb3e8;
+        word-break: break-all;
       }
     }
 
     tbody {
       tr {
         border-bottom: 1px solid #2d5a7b;
+
+        word-break: break-all;
 
         &:hover {
           background-color: #223d52;
