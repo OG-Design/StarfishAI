@@ -138,11 +138,6 @@ async function handleDeleteThreads() {
 
 
 <style lang="scss" scoped>
-$border-radius: 1rem;
-$space: 1rem;
-
-$shadow: 0px 0px 16px 0px rgba(0,0,0,.5);
-
 #thread-menu {
     // width: calc(12.5% - 2rem);
 

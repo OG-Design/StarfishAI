@@ -7,6 +7,18 @@ export default defineConfig(({mode})=>{
   const API_URL = env.API_URL || "http://localhost:3000" ; // Double check
   return {
     plugins: [vue()],
+    css: {
+      preprocessorOptions: {
+        scss: {
+          additionalData: `@use "@/styles/variables.scss" as *;`
+        }
+      }
+    },
+    resolve: {
+      alias: {
+        '@':'/src'
+      }
+    },
     server: {
       port: 5173,
       host: '0.0.0.0',

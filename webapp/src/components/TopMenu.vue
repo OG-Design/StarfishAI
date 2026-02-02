@@ -21,7 +21,7 @@ function handleOpenProfile() {
     </section>
 </template>
 <style lang="scss">
-$space:1rem;
+
 #controll-menu {
     width: 150px;
     height: fit-content;

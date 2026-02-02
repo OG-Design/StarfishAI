@@ -164,8 +164,7 @@ onMounted(async () => {
 </template>
 
 <style lang="scss">
-$space: 1rem;
-$border-radius: 2rem;
+
 
 h1 {
     font-size: 36px;
@@ -178,9 +177,9 @@ h1 {
     position: absolute;
     z-index: 101;
 
-    padding: calc($space * 10);
-    padding-left: calc($space * 25);
-    padding-right: calc($space * 25);
+    padding: calc($settings-space * 10);
+    padding-left: calc($settings-space * 25);
+    padding-right: calc($settings-space * 25);
 
     box-sizing: border-box;
 
@@ -203,16 +202,16 @@ h1 {
     list-style: none;
     li {
 
-        width: calc(100% - $space * 2);
+        width: calc(100% - $settings-space * 2);
         display: flex;
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
 
-        padding: $space;
+        padding: $settings-space;
         box-sizing: border-box;
 
-        gap: $space;
+        gap: $settings-space;
 
         border-radius: $border-radius;
 
@@ -234,7 +233,7 @@ h1 {
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
-        gap: $space;
+        gap: $settings-space;
     }
     select {
         width: 30%;
@@ -252,10 +251,10 @@ h1 {
     height: fit-content;
     background-color: hsla(0, 0%, 85%, .2);
     border-radius: $border-radius;
-    padding: $space;
+    padding: $settings-space;
 
     border-collapse: separate;
-    border-spacing: $space calc($space / 2);
+    border-spacing: $settings-space calc($settings-space / 2);
 
     tbody {
         tr {

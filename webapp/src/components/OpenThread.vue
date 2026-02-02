@@ -294,12 +294,6 @@ function handleUpdateSelectedModel() {
 
 <style lang="scss" >
 
-$shadow: 0px 0px 16px 0px rgba(0,0,0,.5);
-
-$border-radius: 1rem;
-
-$space: 1rem;
-
 #system-prompt {
   width: calc(100% - $space * 2);
   height: auto;
