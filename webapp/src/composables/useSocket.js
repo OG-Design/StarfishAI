@@ -9,36 +9,30 @@ export const aiChunks = ref([]);
 
 export let socket=null;
 
-async function checkJWT() {
+async function checkSession() {
     console.log("Checking JWT");
 
-    const res = await fetch('/api/auth/check');
+    const res = await fetch('/api/auth/check', {credentials: 'include'});
 
     const data = await res.json();
 
-
-    console.log("JWT:", data.jwt);
-
-    if (data && data.jwt) {
-        return data.jwt;
-    }
-
-    authenticated.value = data.isAuth;
-
     console.log("Session: ", await data);
+
+    return data.isAuth;
+
+
 }
 
 // creates socket
 async function createSocket() {
-    const token = await checkJWT();
-    if (!token) {
-        console.warn("No JWT available for the socket connection.");
+    const isAuth = await checkSession();
+    if (!isAuth) {
+        console.warn("Not authenticated, skipping socket connection.");
         return null
     }
 
     const s = io(socketUrl, {
-        withCredentials: true,
-        auth: { token }
+        withCredentials: true
     });
 
     s.on('connect', () => {
@@ -56,9 +50,8 @@ async function createSocket() {
             console.log("Socket disconnected");
             // wait a moment before reconnecting
             setTimeout(async () => {
-                const newToken = await checkJWT();
-                if (newToken) {
-                    s.auth = {token: newToken};
+                const ok = await checkSession();
+                if (ok) {
                     socket = await createSocket();
                 }
             }, 1000);

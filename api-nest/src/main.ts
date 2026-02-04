@@ -23,7 +23,7 @@ async function bootstrap() {
   console.log("API_PORT", configService.get('API_PORT'));
 
   app.enableCors({
-    origin: [configService.get<string>('ALLOWED_ORIGINS')],
+    origin: (configService.get<string>('ALLOWED_ORIGINS') ?? '').split(',').map(s => s.trim()).filter(Boolean),
     credentials: true
   });
 

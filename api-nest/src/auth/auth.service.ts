@@ -65,12 +65,12 @@ export class AuthService {
 
             return {
                 isAuth: true,
-                jwt: token
+                
             };
         } else {
             return {
                 isAuth: false,
-                jwt: {}
+
             };
         }
     }

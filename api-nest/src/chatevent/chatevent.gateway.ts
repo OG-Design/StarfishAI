@@ -1,5 +1,5 @@
 const PORT_WEBAPP = 5173;
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS;
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean);
 
 import { Session, Body, UnauthorizedException} from '@nestjs/common';
 import { SubscribeMessage, WebSocketGateway, MessageBody, ConnectedSocket } from '@nestjs/websockets';
@@ -19,9 +19,10 @@ import { Ollama } from 'ollama';
 import { threadId } from 'worker_threads';
 
 
+
 @WebSocketGateway({
   cors: {
-    origin: [ALLOWED_ORIGINS], // change cors
+    origin: ALLOWED_ORIGINS, // change cors
     credentials: true
   }
 })
@@ -42,6 +43,18 @@ export class ChateventGateway {
   ) {
 
 
+    const cookieHeader = client.handshake.headers.cookie ?? '';
+
+    console.log("Cookie header:", cookieHeader);
+
+    const cookies = cookieHeader.split(';').reduce((acc: any, part: any) => {
+      const [k, ...v] = part.trim().split('=');
+      if (!k) return acc;
+      acc[k] = decodeURIComponent(v.join('='));
+      return acc;
+    }, {} as Record<string, string>);
+
+    const token = cookies.jwt;
 
     console.log("db path:",process.env.DB_PATH);
     console.log("Connection open on ChateventGateway, running for thread", data.thread)
@@ -50,7 +63,7 @@ export class ChateventGateway {
     const thread = data.thread;
     const model = data.model;
 
-    const token = client.handshake.auth.token;
+    // const token = client.handshake.auth.token;
 
     console.log("Token received:", token, "Type:", typeof token);
 
@@ -63,13 +76,16 @@ export class ChateventGateway {
       return
     }
 
-    // verify token
-    const userToken = jwt.verify(token, secretJWT);
+    let userToken: any;
 
-    // check verification
-    if (!userToken) {
+    try {
+      // verify token
+      userToken = jwt.verify(token, secretJWT);
+    } catch (err) {
       console.error("JWT not valid");
-      return new UnauthorizedException("Invalid JWT");
+      client.emit('error', {message: 'Invalid JWT'});
+      client.disconnect();
+      return;
     }
 
     const idUser = userToken.idUser;

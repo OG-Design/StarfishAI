@@ -102,7 +102,6 @@ async function handleLogin() {
 
     if (data.message == "Logged in successfully") {
 
-        localStorage.setItem("jwt", data.jwt); // set jwt to local storage (CHANGE METHOD)
 
         console.log("Logged in successfully")
 

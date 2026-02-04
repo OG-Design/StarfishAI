@@ -35,9 +35,18 @@ export class AuthController {
             {expiresIn: '10m'} // expiration time
         )
 
+
+        // set cookie http only
+        res.cookie('jwt', token, {
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: false,
+            maxAge: 10 * 60 * 1000
+        });
+
         console.log("Token generated:\n", token);
 
-        return res.json({ message: "Logged in successfully", jwt: token });
+        return res.json({ message: "Logged in successfully" });
     }
 
     // handles route and logout by session destruction
@@ -51,6 +60,7 @@ export class AuthController {
 
             // clears cookie
             res.clearCookie('sid');
+            res.clearCookie('jwt');
             return res.json({ message: "Logged out"});
 
         });
