@@ -46,7 +46,13 @@ export class ChateventGateway {
     const cookieHeader = client.handshake.headers.cookie ?? '';
 
     console.log("Cookie header:", cookieHeader);
-
+    /* 
+      ---parse cookies--- 
+      split removes ; reduce uses an accumilator-
+      -to store the key value pair as k and ...v
+      if the key is invalid it returns acc.
+      else it decodes the value and returns that.
+    */
     const cookies = cookieHeader.split(';').reduce((acc: any, part: any) => {
       const [k, ...v] = part.trim().split('=');
       if (!k) return acc;
