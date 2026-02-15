@@ -23,8 +23,33 @@ currentModel.value = stored ? JSON.parse(stored) as ModelOption : null;
 
 const messages = ref<any[]>([]);
 const personality = ref<string>('');
+const isLoading = ref(false);
 
 const emit = defineEmits(['updateThreadTitle']);
+
+
+const promptAnimationPoster = '/animation/ArrowToStop-poster.png';
+const promptAnimationForward = '/animation/ArrowToStop.apng';
+const promptAnimationReverse = '/animation/StopToArrow.apng';
+const promptAnimationSrc = ref(promptAnimationPoster);
+
+
+
+function playPromptAnimation(src: string) {
+  promptAnimationSrc.value=promptAnimationForward;
+  nextTick(() => {
+    promptAnimationSrc.value = `${src}?v=${Date.now()}`;
+  });
+}
+
+watch(isLoading, (loading, prev) => {
+  if (loading) {
+    playPromptAnimation(promptAnimationForward); 
+  } else if (prev) {
+    playPromptAnimation(promptAnimationReverse);
+  }
+}, {immediate: false});
+
 
 /*
   reset aiChunks value so each time OpenThread is opened it gives a clear value,
@@ -73,7 +98,7 @@ async function getAllMessages() {
 
 
 const prompt = ref(null);
-const isLoading = ref(false);
+
 
 // sends a prompt and awaits the response
 async function handlePromptFallback() {
@@ -113,8 +138,8 @@ function handlePrompt() {
   // scroll to bottom
   scrollToBottom();
 
-
   isLoading.value=true; // set loading to true
+
 
   // structure message with the prompts value
   const message = {"role": "user", "content": prompt.value}
@@ -162,6 +187,7 @@ function handlePrompt() {
     alert("Connection error occurred");
 
   })
+
 
 }
 
@@ -238,7 +264,6 @@ function handleUpdateSelectedModel() {
   console.log(localStorage.getItem("selectedModel"));
 }
 
-
 </script>
 
 <template>
@@ -275,9 +300,10 @@ function handleUpdateSelectedModel() {
       <!-- Prints the latest message -->
       <li v-if="currentMessage" class="message markdown-content" v-html="md.render(currentMessage)">
       </li>
-      <div v-if="isLoading" class="loading-gif-container"><img class="loading-gif" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
-      <div v-else></div>
+      
     </ul>
+    <div v-if="isLoading" class="loading-gif-container"><img class="loading-gif" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
+    <div v-else class="loading-gif-container"></div>
 
     <div id="model-selector">
       <select name="" id="models" v-model="currentModel" @click="handleUpdateSelectedModel">
@@ -288,7 +314,7 @@ function handleUpdateSelectedModel() {
     <form id="prompt" @submit.prevent="handlePrompt">
       <textarea type="text" name="send-message" v-model="prompt"></textarea>
       <div>
-        <button type="submit" :disabled="isLoading">Send</button>
+        <button type="submit" :disabled="isLoading"><img class="prompt-image" :src="promptAnimationSrc" alt=""></button>
       </div>
     </form>
   </main>
@@ -454,8 +480,8 @@ $space: 1rem;
   }
 
 
-  $btn-size: 75px;
-  $btn-size-increased: calc($btn-size * 1.05);
+  $btn-size: 100px;
+  $btn-size-increased: calc($btn-size * 1.2);
   div {
     width: calc($btn-size-increased + $space);
     display: flex;
@@ -472,7 +498,8 @@ $space: 1rem;
     border: none;
     border-radius: $border-radius * 10000;
 
-    background-color: hsla(240, 100%, 74%, 12%);
+    // background-color: hsla(240, 100%, 74%, 12%);
+    background: transparent;
     color: white;
     font-weight: 600;
 
@@ -482,7 +509,7 @@ $space: 1rem;
       width: $btn-size-increased;
       height: $btn-size-increased;
 
-      background-color: hsla(240, 100%, 74%, 50%);
+      // background-color: hsla(240, 100%, 74%, 50%);
       cursor: pointer;
     }
 
@@ -495,9 +522,15 @@ $space: 1rem;
     }
 
     &:disabled {
-      background-color: #44475a;
+      // background-color: #44475a;
+      opacity: .5;
       cursor: not-allowed;
     }
+  }
+
+  .prompt-image {
+    width: 100%;
+    height: auto;
   }
 
 
@@ -575,11 +608,12 @@ $space: 1rem;
   display: flex;
   justify-content: center;
   align-items: center;
+  margin-bottom: 5rem;
 
 }
 
 .loading-gif {
-  width: 100px;
+  width: 150px;
   height: auto;
   background: transparent;
   display: block;
