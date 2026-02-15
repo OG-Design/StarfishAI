@@ -31,9 +31,9 @@ async function createSocket() {
         return null
     }
 
-    const s = io(socketUrl, {
+    const s = socketUrl ? io(socketUrl, {
         withCredentials: true
-    });
+    }) : io({withCredentials: true});
 
     s.on('connect', () => {
         console.log("Socket connected:", s.id);

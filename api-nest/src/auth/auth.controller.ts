@@ -32,7 +32,7 @@ export class AuthController {
         const token = jwt.sign(
             {idUser: user.idUser, username: user.username}, //payload
             secretJWT, // token secret CHANGE
-            {expiresIn: '10m'} // expiration time
+            {expiresIn: '1h'} // expiration time
         )
 
 
@@ -41,12 +41,35 @@ export class AuthController {
             httpOnly: true,
             sameSite: 'lax',
             secure: false,
+            path:'/',
             maxAge: 10 * 60 * 1000
         });
 
         console.log("Token generated:\n", token);
 
         return res.json({ message: "Logged in successfully" });
+    }
+
+    @Get('check/token')
+    requestToken() {
+
+    }
+
+    @Get('check')
+    check(@Req() req: Request, @Res() res: Response) {
+        const user: any = req.session?.user;
+        if(!user) return res.json({ isAuth: false});
+
+        const token = jwt.sign({ idUser: user.idUser, username: user.username}, secretJWT, {expiresIn: '1h'});
+        res.cookie('jwt', token, {
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: false,
+            path: '/',
+            maxAge: 60 * 60 * 1000
+        });
+
+        return res.json({ isAuth: true});
     }
 
     // handles route and logout by session destruction

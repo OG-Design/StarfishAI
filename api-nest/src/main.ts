@@ -1,6 +1,5 @@
+import 'dotenv/config';
 const isDev = process.env.NODE_ENV !== 'production'; // set but npm start / start:dev
-
-
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';

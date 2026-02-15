@@ -54,7 +54,7 @@ async function getAllThreads() {
 
 // check if there is a valid session
 async function checkSession() {
-  const res = await fetch('/api/auth/check');
+  const res = await fetch('/api/auth/check', { credentials: 'include'});
 
   const loggedIn = await res.json();
 

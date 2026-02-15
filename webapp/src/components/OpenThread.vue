@@ -51,7 +51,9 @@ const thread = props.idThread;
 
 async function getAllMessages() {
 
-  const res = await fetch(`/api/ai/thread/id/${thread}/messages`);
+  const res = await fetch(`/api/ai/thread/id/${thread}/messages`, {
+    credentials: 'include'
+  });
   const data = await res.json();
 
   console.log(data);
@@ -273,7 +275,7 @@ function handleUpdateSelectedModel() {
       <!-- Prints the latest message -->
       <li v-if="currentMessage" class="message markdown-content" v-html="md.render(currentMessage)">
       </li>
-      <div v-if="isLoading">loading...</div>
+      <div v-if="isLoading"><img class="loading-gif" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
       <div v-else></div>
     </ul>
 
@@ -293,6 +295,12 @@ function handleUpdateSelectedModel() {
 </template>
 
 <style lang="scss" >
+
+$shadow: 0px 0px 16px 0px rgba(0,0,0,.5);
+
+$border-radius: 1rem;
+
+$space: 1rem;
 
 #system-prompt {
   width: calc(100% - $space * 2);
@@ -558,6 +566,14 @@ function handleUpdateSelectedModel() {
     }
 
   }
+
+}
+
+.loading-gif {
+  width: 100px;
+  height: auto;
+  background: transparent;
+  display: block;
 
 }
 
