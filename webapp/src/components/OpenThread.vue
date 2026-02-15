@@ -275,7 +275,7 @@ function handleUpdateSelectedModel() {
       <!-- Prints the latest message -->
       <li v-if="currentMessage" class="message markdown-content" v-html="md.render(currentMessage)">
       </li>
-      <div v-if="isLoading"><img class="loading-gif" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
+      <div v-if="isLoading" class="loading-gif-container"><img class="loading-gif" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
       <div v-else></div>
     </ul>
 
@@ -569,11 +569,22 @@ $space: 1rem;
 
 }
 
+.loading-gif-container {
+  width: 150px;
+  height: 150px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+}
+
 .loading-gif {
   width: 100px;
   height: auto;
   background: transparent;
   display: block;
+
+
 
 }
 
