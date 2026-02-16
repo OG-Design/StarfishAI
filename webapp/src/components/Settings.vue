@@ -66,6 +66,7 @@ async function fetchModelsByGroup() {
     emit("updateModels", models.value); // emit to parent to pass from parent to OpenThread, this allows the list of models to be displayed
 }
 
+const downloadPercentage = ref("");
 
 async function addModelToGroup() {
     isLoading.value=true;
@@ -100,6 +101,7 @@ async function addModelToGroup() {
                 try {
                     const data = JSON.parse(line.substring(6));
                     console.log(data.status, data.progress + '%')
+                    downloadPercentage.value=data.progress;
                 } catch (err) {
                     console.error("Parse error:", err);
                 }
@@ -203,7 +205,7 @@ onMounted(async () => {
                                 <th><input type="text" name="" id="modelFullName" placeholder="fullname" v-model="addFullName"></th>
                                 <th><button @click="addModelToGroup">Add</button></th>
                                 <th>
-                                    <div v-if="isLoading" class="loading-gif-container-settings"><img class="loading-gif-settings" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
+                                    <div v-if="isLoading" class="loading-gif-container-settings"><img class="loading-gif-settings" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""><span>{{ downloadPercentage }}%</span></div>
                                     <div v-else class="loading-gif-container-settings"></div>
                                 </th>
                             </tr>
@@ -336,8 +338,17 @@ h1 {
 
 $scale-gif:50px;
 .loading-gif-container-settings {
-    width: $scale-gif;
+    width: fit-content;
     height: $scale-gif;
+
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+
+    span {
+        height: 50%;
+    }
 }
 .loading-gif-settings {
     width: $scale-gif;
