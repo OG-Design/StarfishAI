@@ -7,6 +7,7 @@ function handleSettingsMenu() {
     emit("openSettings");
 }
 
+const isLoading = ref(false);
 
 const models = ref([]);
 const groups = ref([]);
@@ -67,10 +68,8 @@ async function fetchModelsByGroup() {
 
 
 async function addModelToGroup() {
+    isLoading.value=true;
     responseAddModel.value="Loading...";
-
-
-
 
     const body = {
         model: {
@@ -93,7 +92,13 @@ async function addModelToGroup() {
     const data = await res;
 
     responseAddModel.value=data;
-    console.log("Result of adding model:", await data);
+    console.log("Result of adding model:", data);
+    isLoading.value=false;
+
+    // Re-fetch to update DOM
+    fetchModelsByGroup();
+
+
 }
 
 function toggleEditMode() {
@@ -150,7 +155,10 @@ onMounted(async () => {
                                 <th><input type="text" name="" id="modelName" placeholder="name" v-model="addName"></th>
                                 <th><input type="text" name="" id="modelFullName" placeholder="fullname" v-model="addFullName"></th>
                                 <th><button @click="addModelToGroup">Add</button></th>
-                                <th>{{ responseAddModel }}</th>
+                                <th>
+                                    <div v-if="isLoading" class="loading-gif-container"><img class="loading-gif" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
+                                    <div v-else class="loading-gif-container">No downloads loading.</div>
+                                </th>
                             </tr>
                         </tbody>
                     </table>
@@ -278,6 +286,12 @@ h1 {
     border: none;
 
 }
+
+.loading-gif-container {
+    width: 50px;
+    height: 50px;
+}
+
 
 @media screen and (max-width: 1500px) {
   .fill {

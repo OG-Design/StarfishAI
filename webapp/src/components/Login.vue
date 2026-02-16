@@ -23,7 +23,7 @@ let register_password = ref('');
 let register_password_confirm = ref('');
 
 const isRegisterable = ref(false);
-
+const hasRegistered = ref(false);
 
 // Emit signals out of this component as named in array elements
 const emit = defineEmits(['updateThreadsAvailable', 'authenticated']);
@@ -142,6 +142,7 @@ async function handleRegister() {
     if (data.message == "Registered successfully") {
 
         console.log("Registered in successfully");
+        hasRegistered.value=true;
 
     }
 
@@ -173,7 +174,9 @@ async function handleRegister() {
                 <label for="password">Password Confirmation</label>
                 <input type="password" placeholder="******" v-model="register_password_confirm">
 
-                <button type="submit">Sign in</button>
+                <button type="submit" :disabled="hasRegistered">Sign up</button>
+
+                <div v-if="hasRegistered">User has been registered!</div>
             </form>
         </section>
     </template>

@@ -422,7 +422,7 @@ $space: 1rem;
   margin-bottom: 0;
   margin-top: 0;
   padding-top: calc($space * 5);
-  padding-bottom: calc($space * 4);
+  padding-bottom: calc($space * 10);
   gap: calc($space * 5);
 
   box-sizing: border-box;
@@ -609,7 +609,10 @@ $space: 1rem;
   justify-content: center;
   align-items: center;
   margin-bottom: 5rem;
+  position: absolute;
 
+  bottom: 10rem;
+  left: 20rem;
 }
 
 .loading-gif {

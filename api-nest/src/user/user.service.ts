@@ -38,7 +38,6 @@ export class UserService {
             return "User with username " + username + " already exists."
         }
 
-
         // try to hash and insert userdata
         try {
 
@@ -50,6 +49,10 @@ export class UserService {
             console.log(user.idUser);
 
             db.prepare("INSERT INTO groupMember (user_idUser, userGroup_idUserGroup) VALUES (?, 2)").run(user.idUser);
+
+            const newUserGroup: any = db.prepare(`INSERT INTO userGroup (name) VALUES ('Private Group')`).run();
+            
+            db.prepare(`INSERT INTO groupMember (user_idUser, userGroup_idUserGroup, permissionLevel) VALUES (?, ?, 'admin')`).run(user.idUser, newUserGroup.lastInsertRowid);
 
             return "User has been registered";
         } catch (err) {
@@ -77,7 +80,7 @@ export class UserService {
         const idUser = session.user.idUser;
 
         const groups = db.prepare(`
-SELECT idGroupMember, name, permissionLevel, username, userGroup_idUserGroup, user_idUser
+SELECT idGroupMember, userGroup.name, userGroup.permissionLevel, username, userGroup_idUserGroup, user_idUser
 FROM groupMember
 INNER JOIN userGroup -- join userGroup's (the permission level groups)
 ON groupMember.userGroup_idUserGroup = userGroup.idUserGroup

@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 
 import thread from '../types/thread';
 
@@ -213,6 +213,28 @@ export class AiService {
 
         // logic for adding model (pull, add to db, etc)
         try {
+
+
+            const checkUserPermission: any = db.prepare(`
+SELECT 
+-- groupMembers
+groupMember.idGroupMember, groupMember.user_idUser, groupMember.permissionLevel AS groupMemberPermissionLevel,
+-- userGroup
+userGroup.idUserGroup, userGroup.name AS groupName, userGroup.permissionLevel AS userGroupPermissionLevel
+FROM groupMember
+INNER JOIN userGroup
+ON userGroup.idUserGroup = groupMember.userGroup_idUserGroup
+WHERE groupMember.user_idUser = ? AND userGroup.idUserGroup = ?
+            `).all(idUser, idGroup);
+
+            console.log("A User with id:", idUser," is trying to add model on group with id:", idGroup, ".\n result of query: \n", checkUserPermission);
+
+            // check if user has admin privileges 
+            if (checkUserPermission.length==0 || checkUserPermission[0].groupMemberPermissionLevel != "admin") {
+                throw new UnauthorizedException("A user with id: " + idUser + " tried to access a group they don't administrator privileges in. group id: " + idGroup);
+            };
+
+
             console.log("Trying to add a model, checking if it already exists on group", groupName);
             const checkModelExists = db.prepare(`
 SELECT
@@ -237,8 +259,10 @@ WHERE idUser = ?
 AND idUserGroup = ?
 
 /* By modelName */
-AND model.name = ?
+AND model.fullName = ?
             `).all(idUser, idGroup, modelFullName);
+
+            
 
             console.log("Table: checkModelExists");
             console.table(checkModelExists);
@@ -301,7 +325,12 @@ AND model.name = ?
         console.log(group);
 
         const isUserGroup = db.prepare(`
-SELECT idGroupMember, name, permissionLevel, username, userGroup_idUserGroup 
+SELECT 
+idGroupMember, 
+userGroup.name, 
+userGroup.permissionLevel, 
+username, 
+userGroup_idUserGroup 
 FROM groupMember
 INNER JOIN userGroup -- join userGroup's (the permission level groups)
 ON groupMember.userGroup_idUserGroup = userGroup.idUserGroup
