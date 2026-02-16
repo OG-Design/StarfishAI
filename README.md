@@ -16,11 +16,19 @@ Starfish is an AI app that allows multiple users to use AI locally. You can chat
 
 Generate your Database using this script: [link](./api-nest/starfish.db.sql)
 
-Use either sqlite-studio or sqlite cli to generate the db. You can install sqlite here: [Link](https://sqlite.org/)
+Use either sqlite-studio or sqlite-tools to generate the db. You can install sqlite here: [Link](https://sqlite.org/)
 
 ### Generate using terminal
 ```bash
-# coming soon
+# sqlite3
+# 1.
+cd ./api-nest
+
+# 2.
+sqlite3 starfish.db
+
+# 3.
+.read "./starfish.db.sql"
 ```
 
 ## 3. Generate the environment variables

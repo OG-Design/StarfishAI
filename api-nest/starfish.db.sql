@@ -15,10 +15,16 @@ CREATE TABLE IF NOT EXISTS thread (
 
 -- create group
 CREATE TABLE IF NOT EXISTS userGroup (
-  idUserGroup INT PRIMARY KEY,
+  idUserGroup INTEGER PRIMARY KEY,
   name TEXT,
   permissionLevel TEXT
 );
+
+-- default groups
+INSERT OR IGNORE INTO userGroup (idUserGroup, name, permissionLevel)
+VALUES
+  (1, 'Administrator Group', 'admin'),
+  (2, 'Public Group', 'public');
 
 -- handles members of each group
 CREATE TABLE IF NOT EXISTS groupMember (

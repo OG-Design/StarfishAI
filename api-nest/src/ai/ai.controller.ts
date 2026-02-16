@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Param, Body, Session, UseGuards} from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Session, UseGuards, Sse} from '@nestjs/common';
 
 import { SessionAuthGuard } from 'src/auth/session-auth.guard';
 
 import { AiService } from './ai.service';
+import { Observable } from 'rxjs';
 
 @Controller('ai')
 @UseGuards(SessionAuthGuard)
@@ -59,7 +60,8 @@ export class AiController {
     }
 
     @Post('model/add')
-    async addModel(
+    @Sse()
+    addModel(
         @Session() session: Record<string, any>,
         @Body() body: {
             model: {
@@ -71,8 +73,8 @@ export class AiController {
                 idUserGroup: number
             }
         }
-    ) {
-        return await this.aiService.addModel(body.model, body.group, session);
+    ): Observable<MessageEvent> {
+        return this.aiService.addModel(body.model, body.group, session);
     }
 
     @Post('model/all')

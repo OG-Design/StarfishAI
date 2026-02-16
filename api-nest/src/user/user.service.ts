@@ -50,9 +50,9 @@ export class UserService {
 
             db.prepare("INSERT INTO groupMember (user_idUser, userGroup_idUserGroup) VALUES (?, 2)").run(user.idUser);
 
-            const newUserGroup: any = db.prepare(`INSERT INTO userGroup (name) VALUES ('Private Group')`).run();
+            const newUserGroup: any = db.prepare(`INSERT INTO userGroup (name, permissionLevel) VALUES ('Private Group', 'admin') RETURNING idUserGroup`).get();
             
-            db.prepare(`INSERT INTO groupMember (user_idUser, userGroup_idUserGroup, permissionLevel) VALUES (?, ?, 'admin')`).run(user.idUser, newUserGroup.lastInsertRowid);
+            db.prepare(`INSERT INTO groupMember (user_idUser, userGroup_idUserGroup, permissionLevel) VALUES (?, ?, 'admin')`).run(user.idUser, newUserGroup.idUserGroup);
 
             return "User has been registered";
         } catch (err) {

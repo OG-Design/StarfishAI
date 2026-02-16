@@ -3,6 +3,7 @@ import { BadRequestException, ConflictException, Injectable, InternalServerError
 import thread from '../types/thread';
 
 import ollama from 'ollama';
+import { Ollama } from 'ollama';
 
 import Database from 'better-sqlite3';
 import { request } from 'http';
@@ -10,6 +11,7 @@ import { request } from 'http';
 import { ConfigService } from '@nestjs/config';
 
 import db from '../db';
+import { Observable } from 'rxjs';
 
 function parseJsonFromString(str: string): any | null {
     const match = str.match(/{[\s\S]*}/);
@@ -28,7 +30,13 @@ function parseJsonFromString(str: string): any | null {
 @Injectable()
 export class AiService {
 
-    constructor(private readonly config: ConfigService) {};
+    constructor(private readonly config: ConfigService) {
+        this.ollamaClient = new Ollama({
+            host: this.getOllamaEndpoint() ?? 'http://127.0.0.1:11434'
+        })
+    };
+
+    private readonly ollamaClient: Ollama;
 
     getOllamaEndpoint() {
         return this.config.get<string>('OLLAMA_URL');
@@ -200,115 +208,148 @@ export class AiService {
     }
 
 
-    async addModel(
+    addModel(
         model: {name: string, fullName: string},
         group: {name: string, idUserGroup?: number},
         session: any
-    ) {
+    ): Observable<MessageEvent> {
         const idUser = session.user.idUser;
         const modelName = model.name;
         const modelFullName = model.fullName;
         const idGroup = group.idUserGroup;
         const groupName = group.name;
 
-        // logic for adding model (pull, add to db, etc)
-        try {
+        return new Observable((observer)=>{
+            console.log("Observable subscribed");
+            (async () => {
+                // logic for adding model (pull, add to db, etc)
+                try {
+                    console.log("Starting async logic...")
+
+                    const checkUserPermission: any = db.prepare(`
+                        SELECT 
+                        -- groupMembers
+                        groupMember.idGroupMember, groupMember.user_idUser, groupMember.permissionLevel AS groupMemberPermissionLevel,
+                        -- userGroup
+                        userGroup.idUserGroup, userGroup.name AS groupName, userGroup.permissionLevel AS userGroupPermissionLevel
+                        FROM groupMember
+                        INNER JOIN userGroup
+                        ON userGroup.idUserGroup = groupMember.userGroup_idUserGroup
+                        WHERE groupMember.user_idUser = ? AND userGroup.idUserGroup = ?
+                    `).all(idUser, idGroup);
+
+                    console.log("A User with id:", idUser," is trying to add model on group with id:", idGroup, ".\n result of query: \n", checkUserPermission);
+
+                    // check if user has admin privileges 
+                    if (checkUserPermission.length==0 || checkUserPermission[0].groupMemberPermissionLevel != "admin") {
+                        console.error("Permission denied");
+                        observer.error(new UnauthorizedException("A user with id: " + idUser + " tried to access a group they don't administrator privileges in. group id: " + idGroup));
+                        return;
+                    };
 
 
-            const checkUserPermission: any = db.prepare(`
-SELECT 
--- groupMembers
-groupMember.idGroupMember, groupMember.user_idUser, groupMember.permissionLevel AS groupMemberPermissionLevel,
--- userGroup
-userGroup.idUserGroup, userGroup.name AS groupName, userGroup.permissionLevel AS userGroupPermissionLevel
-FROM groupMember
-INNER JOIN userGroup
-ON userGroup.idUserGroup = groupMember.userGroup_idUserGroup
-WHERE groupMember.user_idUser = ? AND userGroup.idUserGroup = ?
-            `).all(idUser, idGroup);
+                    console.log("Trying to add a model, checking if it already exists on group", groupName);
+                    const checkModelExists = db.prepare(`
+                        SELECT
+                        -- groupMembers
+                        groupMember.idGroupMember, username,
+                        -- model
+                        model.name AS modelName, model.fullName AS modelFullName,
+                        -- userGroup
+                        userGroup.idUserGroup, userGroup.name AS groupName
+                        FROM groupMember
+                        INNER JOIN userGroup
+                        ON userGroup.idUserGroup = groupMember.userGroup_idUserGroup
+                        INNER JOIN model
+                        ON model.userGroup_idUserGroup = userGroup.idUserGroup
+                        INNER JOIN user
+                        ON user.idUser = groupMember.user_idUser
 
-            console.log("A User with id:", idUser," is trying to add model on group with id:", idGroup, ".\n result of query: \n", checkUserPermission);
+                        /* By user */
+                        WHERE idUser = ?
 
-            // check if user has admin privileges 
-            if (checkUserPermission.length==0 || checkUserPermission[0].groupMemberPermissionLevel != "admin") {
-                throw new UnauthorizedException("A user with id: " + idUser + " tried to access a group they don't administrator privileges in. group id: " + idGroup);
-            };
+                        /* By group */
+                        AND idUserGroup = ?
 
+                        /* By modelName */
+                        AND model.fullName = ?
+                    `).all(idUser, idGroup, modelFullName);
 
-            console.log("Trying to add a model, checking if it already exists on group", groupName);
-            const checkModelExists = db.prepare(`
-SELECT
--- groupMembers
-groupMember.idGroupMember, username,
--- model
-model.name AS modelName, model.fullName AS modelFullName,
--- userGroup
-userGroup.idUserGroup, userGroup.name AS groupName
-FROM groupMember
-INNER JOIN userGroup
-ON userGroup.idUserGroup = groupMember.userGroup_idUserGroup
-INNER JOIN model
-ON model.userGroup_idUserGroup = userGroup.idUserGroup
-INNER JOIN user
-ON user.idUser = groupMember.user_idUser
+                    
 
-/* By user */
-WHERE idUser = ?
+                    console.log("Table: checkModelExists");
+                    console.table(checkModelExists);
 
-/* By group */
-AND idUserGroup = ?
+                    // check if model exists in db
+                    if (checkModelExists.length!=0) {
+                        console.log("Model already exists!");
+                        observer.error(new ConflictException("Model " + modelFullName + " already exists on group: " + groupName));
+                        return;
+                    }
 
-/* By modelName */
-AND model.fullName = ?
-            `).all(idUser, idGroup, modelFullName);
+                    console.log("Starting model pull...");
+                    observer.next({ data: JSON.stringify({status: 'pulling', progress: 0}) } as MessageEvent);
 
-            
+                    console.log("Adding model", modelFullName, "on group", groupName);
+                    const model = await this.ollamaClient.pull({
+                        model: modelFullName,
+                        stream: true
+                    });
 
-            console.log("Table: checkModelExists");
-            console.table(checkModelExists);
+                    let lastStatus = "";
+                    let totalBytes = 0;
+                    let completedBytes = 0;
 
-            // check if model exists in db
-            if (checkModelExists.length!=0) {
-                console.log("Model already exists!");
-                throw new ConflictException("Model " + modelFullName + " already exists on group: " + groupName);
-            }
+                    for await (const event of model as AsyncIterable<any>) {
+                        console.log("Pull event:", event);
+                        lastStatus= event?.status ?? lastStatus;
+                        
+                        
+                        if (event?.total) {
+                            totalBytes = event.total;
+                        }
 
+                        if (event?.completed !== undefined) {
+                            completedBytes = event.completed;
+                        }
+                        
+                        const progress = event?.completed && event?.total
+                        ? (event.completed / event.total) * 100 : 0;
 
+                        const eventData = {
+                            status: lastStatus,
+                            progress: Math.round(progress),
+                            digest: event?.digest
+                        }
 
-            console.log("Adding model", modelFullName, "on group", groupName);
-            const model = await ollama.pull({
-                model: modelFullName,
-                stream: true
-            });
+                        observer.next({
+                        data: JSON.stringify(eventData)    
+                        } as MessageEvent);
+                        console.log(lastStatus, Math.round(progress) + '%', event);
+                    }
 
-            let lastStatus = "";
-            for await (const event of model as AsyncIterable<any>) {
-                lastStatus= event?.status ?? lastStatus;
-                console.log(lastStatus);
-            }
+                    if (lastStatus !== "success") {
+                        observer.next({data: JSON.stringify({ error: 'Pull failed'})} as MessageEvent);
+                        observer.complete();
+                        return;
+                    }
 
-            if (lastStatus !== "success") {
-                throw new InternalServerErrorException("Ollama pull did not complete successfully");
-            }
+                    db.prepare(`
+                    INSERT INTO model (name, fullname, userGroup_idUserGroup) VALUES (?, ?, ?)
+                    `).run(modelName, modelFullName, idGroup);
 
-            db.prepare(`
-            INSERT INTO model (name, fullname, userGroup_idUserGroup) VALUES (?, ?, ?)
-            `).run(modelName, modelFullName, idGroup);
+                    console.log("Model added", modelFullName, "on group", groupName);
+                    
+                    observer.next({data: JSON.stringify({status: 'complete', progress: 100})} as MessageEvent);
+                    observer.complete();
 
-            console.log("Model added", modelFullName, "on group", groupName);
-            return "Model added successfully!"
+                } catch (err) {
+                    console.error("Error occured while adding model:", err);
 
-        } catch (err) {
-            console.error("Error occured while adding model:", err);
-
-            if (err instanceof ConflictException) throw err;
-            if (err?.cause?.code === "UND_ERR_HEADERS_TIMEOUT") {
-                throw new InternalServerErrorException("Internal server error: Adding model failed");
-            }
-            throw new InternalServerErrorException("Internal server error: Adding model failed");
-        }
-
-
+                    observer.error(err);
+                }
+            })();
+        });
 
     }
 

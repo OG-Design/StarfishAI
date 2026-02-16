@@ -82,21 +82,68 @@ async function addModelToGroup() {
         }
     }
     console.log("addModelToGroup, Body: \n", body);
-    const res = await fetch('/api/ai/model/add', {
-        method: 'POST',
-        headers: {
-            'Content-Type':'application/json'
-        },
-        body: JSON.stringify(body)
-    })
-    const data = await res;
+    
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/ai/model/add', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Accept', 'text/event-stream');
 
-    responseAddModel.value=data;
-    console.log("Result of adding model:", data);
-    isLoading.value=false;
+    let lastIndex = 0;
+
+    xhr.onprogress = () => {
+        const newData = xhr.responseText.substring(lastIndex);
+        lastIndex = xhr.responseText.length;
+
+        const lines = newData.split('\n');
+        for (const line of lines) {
+            if (line.startsWith("data: ")) {
+                try {
+                    const data = JSON.parse(line.substring(6));
+                    console.log(data.status, data.progress + '%')
+                } catch (err) {
+                    console.error("Parse error:", err);
+                }
+            }
+        }
+    };
+
+    xhr.onload = () => {
+        console.log("Model added successfully");
+        isLoading.value = false;
+        responseAddModel.value = "Complete";
+        fetchModelsByGroup();
+    };
+
+    xhr.onerror = () => {
+        console.error("Error occured while downloading");
+        isLoading.value = false;
+        responseAddModel.value = "Error";
+    }
+
+    xhr.send(JSON.stringify(body));
+    
+    // const res = await fetch('/api/ai/model/add', {
+    //     method: 'POST',
+    //     headers: {
+    //         'Content-Type':'application/json'
+    //     },
+    //     body: JSON.stringify(body)
+    // })
+
+    // res.onmessage = (event) => {
+    //     const data = JSON.parse(event.data);
+    //     console.log(data.status, data.progress + '%');
+    // }
+
+    // res.onerror = () => {
+    //     console.log("Error occured while downloading");
+    //     res.close();
+    // }    
+
+    // console.log("Result of adding model:");
 
     // Re-fetch to update DOM
-    fetchModelsByGroup();
+    
 
 
 }
@@ -156,8 +203,8 @@ onMounted(async () => {
                                 <th><input type="text" name="" id="modelFullName" placeholder="fullname" v-model="addFullName"></th>
                                 <th><button @click="addModelToGroup">Add</button></th>
                                 <th>
-                                    <div v-if="isLoading" class="loading-gif-container"><img class="loading-gif" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
-                                    <div v-else class="loading-gif-container">No downloads loading.</div>
+                                    <div v-if="isLoading" class="loading-gif-container-settings"><img class="loading-gif-settings" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
+                                    <div v-else class="loading-gif-container-settings"></div>
                                 </th>
                             </tr>
                         </tbody>
@@ -287,9 +334,13 @@ h1 {
 
 }
 
-.loading-gif-container {
-    width: 50px;
-    height: 50px;
+$scale-gif:50px;
+.loading-gif-container-settings {
+    width: $scale-gif;
+    height: $scale-gif;
+}
+.loading-gif-settings {
+    width: $scale-gif;
 }
 
 
