@@ -15,16 +15,17 @@ CREATE TABLE IF NOT EXISTS thread (
 
 -- create group
 CREATE TABLE IF NOT EXISTS userGroup (
-  idUserGroup INT NOT NULL PRIMARY KEY,
+  idUserGroup INT PRIMARY KEY,
   name TEXT,
   permissionLevel TEXT
 );
 
 -- handles members of each group
 CREATE TABLE IF NOT EXISTS groupMember (
-  idGroupMember INTEGER NOT NULL PRIMARY KEY,
+  idGroupMember INTEGER PRIMARY KEY,
   user_idUser INTEGER,
   userGroup_idUserGroup INTEGER,
+  permissionLevel TEXT,
   FOREIGN KEY (user_idUser) REFERENCES user(idUser),
   FOREIGN KEY (userGroup_idUserGroup) REFERENCES userGroup(idUserGroup)
 );
