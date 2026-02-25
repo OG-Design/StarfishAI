@@ -1,5 +1,6 @@
 <script setup>
 import { defineEmits, nextTick, onMounted, ref } from 'vue';
+import { apiFetch, API_BASE } from '../composables/useApi';
 
 const emit = defineEmits(["openSettings", "updateModels"]);
 
@@ -20,7 +21,7 @@ const selectedModels = ref([]);
 
 // fetch groups accessible by user (userGroup contains models)
 async function fetchUserGroup() {
-    const res = await fetch("/api/user/userGroup", {
+    const res = await apiFetch("/api/user/userGroup", {
         method: 'GET',
         headers: {
             "Content-Type":"application/json"
@@ -50,7 +51,7 @@ async function fetchModelsByGroup() {
         }
     }
 
-    const res = await fetch("/api/ai/model/all", {
+    const res = await apiFetch("/api/ai/model/all", {
         method: 'POST',
         headers: {
             "Content-Type":"application/json"
@@ -85,7 +86,7 @@ async function addModelToGroup() {
     console.log("addModelToGroup, Body: \n", body);
     
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/ai/model/add', true);
+    xhr.open('POST', `${API_BASE}/api/ai/model/add`, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.setRequestHeader('Accept', 'text/event-stream');
 

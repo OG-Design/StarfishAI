@@ -40,7 +40,7 @@ html, body {
   padding: 0;
 
   display: grid;
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: clamp(150px, 20%, 200px) 1fr;
   grid-template-rows: 100vh;
   grid-template-areas:
     "menu thread"

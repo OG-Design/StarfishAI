@@ -142,7 +142,7 @@ export class AiService {
         const idUser = session.user.idUser;
         const thread_author = db.prepare('SELECT author_idUser, idThread FROM thread WHERE author_idUser = ? AND idThread = ?').get(idUser, thread);
         if (!thread_author) {
-            return thread_author;
+            return [];
         }
         const messages = db.prepare('SELECT * FROM message WHERE idThread = ?').all(thread);
         // console.log(messages);

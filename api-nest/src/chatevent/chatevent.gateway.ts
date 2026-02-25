@@ -73,35 +73,45 @@ export class ChateventGateway {
 
     console.log("Token received:", token, "Type:", typeof token);
 
-    // token type check
-    if(!token || typeof token !== 'string') {
-      console.error("Invalid or missing token");
-      console.log("Token:", token)
-      client.emit('error', {message: 'Authentication failed'});
-      client.disconnect();
-      return
+
+    let idUser: any;
+
+    if(process.env.ELECTRON_MODE === 'true') {
+      idUser=1;
+    } else {
+
+      // token type check
+      if(!token || typeof token !== 'string') {
+        console.error("Invalid or missing token");
+        console.log("Token:", token)
+        client.emit('error', {message: 'Authentication failed'});
+        client.disconnect();
+        return
+      }
+
+      let userToken: any;
+
+      try {
+        // verify token
+        userToken = jwt.verify(token, secretJWT);
+      } catch (err) {
+        console.error("JWT not valid");
+        client.emit('error', {message: 'Invalid JWT'});
+        client.disconnect();
+        return;
+      }
+      
+
+      idUser = userToken.idUser;
     }
 
-    let userToken: any;
-
-    try {
-      // verify token
-      userToken = jwt.verify(token, secretJWT);
-    } catch (err) {
-      console.error("JWT not valid");
-      client.emit('error', {message: 'Invalid JWT'});
-      client.disconnect();
-      return;
-    }
-
-    const idUser = userToken.idUser;
     const thread_author = db.prepare('SELECT * FROM thread WHERE author_idUser = ? AND idThread = ? ').all(idUser, thread)
 
     console.log(thread_author);
 
     // check if author is valid
     if (thread_author.length == 0) {
-      console.log("User ", userToken.username, "tried to access thread with id ", thread, ". They're not the author if the thread exists");
+      console.log("User ", "userToken.username", "tried to access thread with id ", thread, ". They're not the author if the thread exists");
       return "You own no threads with id "+ thread;
     }
 

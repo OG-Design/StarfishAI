@@ -2,7 +2,9 @@
 <script setup lang="ts">
 
 
-import { ref, onMounted, nextTick } from 'vue'
+import { ref } from 'vue'
+
+import { apiFetch } from '../composables/useApi';
 
 import type thread from '../../../types/thread';
 
@@ -27,8 +29,8 @@ function handleOpenThread(i: number) {
 
 
 
-    const title = thread.title; // title of selected thread
-    const idThread = thread.idThread; // to reference the thread to find
+    // const title = thread.title; // title of selected thread
+    // const idThread = thread.idThread; // to reference the thread to find
     // console.log(title);
 
     selectedThread.value=thread;
@@ -39,7 +41,7 @@ function handleOpenThread(i: number) {
 
 async function handleCreateThread () {
     console.log("Creating thread");
-    const res = await fetch('/api/ai/thread/create');
+    const res = await apiFetch('/api/ai/thread/create');
     console.log(res);
     emit('updateThreadsAvailable');
 }
@@ -81,7 +83,7 @@ async function handleDeleteThreads() {
     if (confirm("Are you sure you want to delete the selected threads? This is irreversable! Click OK to delete or No to Cancel.")) {
         console.log("Threads are now deleted");
 
-        const res = await fetch('/api/ai/thread/deleteSelected', {
+        const res = await apiFetch('/api/ai/thread/deleteSelected', {
             method: "POST",
             headers: {
                 'Content-Type':'application/json'
@@ -105,12 +107,12 @@ async function handleDeleteThreads() {
         <!-- If editmode is not active -->
         <template v-if="!editMode">
 
-            <div class="flex-row">
-                <button @click="handleEditMode">...</button>
-            </div>
+            <li class="menu-child">
+                <button class="center-text" @click="handleEditMode">...</button>
+            </li>
             <!-- For each thread make button to open thread -->
             <li class="menu-child" v-for="(thr, index) in props.threadsAvailable" :key="index" >
-                <button @click="handleOpenThread(index) /* handles thread opening */ " :class="{'selected-thread': selectedThread == thr.idThread}" >{{thr.title}}</button>
+                <button @click="handleOpenThread(index) /* handles thread opening */ " :class="selectedThread?.idThread === thr.idThread ? 'selected-thread' : ''" >{{thr.title}}</button>
             </li>
         </template>
 
@@ -125,14 +127,16 @@ async function handleDeleteThreads() {
             <!-- For each thread make button to open thread aswell as the delete checkbox -->
             <li class="menu-child" v-for="(thr, index) in props.threadsAvailable" :key="index" >
                 <button
-                @click="handleOpenThread(index) /* handles thread opening */ " :class="{'selected-thread': selectedThread == thr.idThread}">{{thr.title}}</button>
+                @click="handleOpenThread(index) /* handles thread opening */ " :class="{'selected-thread': selectedThread?.idThread == thr.idThread}">{{thr.title}}</button>
                 <input type="checkbox"
                 v-model="checkedIds"
                 :value="thr.idThread"
                 :key="index">
             </li>
         </template>
-        <button @click="handleCreateThread">Create thread</button>
+        <li class="menu-child">
+            <button class="center-text" @click="handleCreateThread">Create thread</button>
+        </li>
     </ul>
 </template>
 
@@ -168,7 +172,6 @@ async function handleDeleteThreads() {
     z-index: 100;
 
     button {
-        width: calc(100% - $space * 2);
         height: fit-content;
 
         padding: $space;
@@ -182,13 +185,14 @@ async function handleDeleteThreads() {
 
         transition: .2s;
 
+        flex-grow: 1;
+
         &:hover {
             border: 1px solid hsla(240, 100%, 74%, .4);
         }
     }
 
     .flex-row {
-
         width: calc(100%);
 
         display: flex;
@@ -222,10 +226,23 @@ async function handleDeleteThreads() {
         padding: 0;
         margin: 0;
 
+        button {
+            text-align: start;
+        }
+
+        .center-text {
+            text-align: center;
+        }
+
         input {
             margin: 0;
             width: 20%;
         }
+    }
+
+    .menu-child:last-child {
+        margin-top: auto;
+        margin-bottom: $space;
     }
 
 
@@ -248,7 +265,6 @@ async function handleDeleteThreads() {
         color: #E6E8EE;
         border: 1px solid #7C7CFF;
     }
-
 }
 </style>
 

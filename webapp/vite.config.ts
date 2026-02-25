@@ -4,9 +4,10 @@ import vue from '@vitejs/plugin-vue'
 // https://vite.dev/config/
 export default defineConfig(({mode})=>{
   const env = loadEnv(mode, process.cwd()+"../");
-  const API_URL = env.API_URL || "http://localhost:3000" ; // Double check
+  const API_URL = env.VITE_API_URL || "http://localhost:3000" ; // Double check
   return {
     plugins: [vue()],
+    base:"./",
     css: {
       preprocessorOptions: {
         scss: {
@@ -26,7 +27,7 @@ export default defineConfig(({mode})=>{
         '/api': {
           target: API_URL,
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, '')
+          // rewrite: (path) => path.replace(/^\/api/, '')
         },
         '/socket.io': {
         target: API_URL,

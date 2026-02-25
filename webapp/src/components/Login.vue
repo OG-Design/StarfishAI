@@ -1,10 +1,10 @@
 <script setup lang="ts">
 
-import { connect } from 'socket.io-client';
 import {ref, onMounted, watch} from 'vue'
 
 // used to make a socket connection.
 import { connectSocket } from '../composables/useSocket';
+import { apiFetch } from '../composables/useApi';
 
 // define props
 const props = defineProps({
@@ -39,7 +39,7 @@ onMounted(async () => {
 
     // check session
     async function checkSession() {
-        const res = await fetch('/api/auth/check', {
+        const res = await apiFetch('/api/auth/check', {
             credentials: 'include'
         });
 
@@ -69,7 +69,7 @@ onMounted(async () => {
     }
 
     // check id the API user regiserability is active
-    const checkRegisterability = await fetch("/api/user/isRegisterable");
+    const checkRegisterability = await apiFetch("/api/user/isRegisterable");
     const res = await checkRegisterability.json();
 
     if (res.isRegisterable==undefined) {
@@ -89,7 +89,7 @@ async function handleLogin() {
         password: password.value
     }
 
-    const res = await fetch('/api/auth/login', {
+    const res = await apiFetch('/api/auth/login', {
         method: "POST",
         headers: {
             'Content-Type':'application/json'
@@ -129,7 +129,7 @@ async function handleRegister() {
 
     console.log("Register body \n", body);
 
-    const res = await fetch('/api/user/register', {
+    const res = await apiFetch('/api/user/register', {
         method: "POST",
         headers: {
             'Content-Type':'application/json'

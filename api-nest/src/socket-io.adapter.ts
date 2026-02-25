@@ -10,7 +10,14 @@ export class SessionIoAdapter extends IoAdapter {
     }
 
     createIOServer(port: number, options?: ServerOptions): any {
-        const server = super.createIOServer(port, options);
+        const corsOrigins = (process.env.ALLOWED_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean);
+        const server = super.createIOServer(port, {
+            ...options,
+            cors: {
+                origin: corsOrigins,
+                credentials: true
+            }
+        });
 
         server.use((socket, next)=>{
             sessionMiddleware(socket.request, {} as any, next);

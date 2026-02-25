@@ -1,0 +1,73 @@
+{
+  "name": "electron",
+  "version": "0.0.1-alpha",
+  "description": "Starfish AI Desktop Application",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc && electron-builder",
+    "electron-rebuild":"electron-rebuild -f -w better-sqlite3",
+    "serve": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^40.6.0",
+    "electron-builder": "^26.8.1",
+    "typescript": "^5.9.3"
+  },
+  "build": {
+    "appId": "com.olsen-graphics.starfish",
+    "productName":"Starfish AI",
+    "files": [
+      "dist/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../webapp/dist",
+        "to": "webapp/dist"
+      },
+      {
+        "from": "../api-nest/dist",
+        "to": "api-nest/dist"
+      },
+      {
+        "from": "../api-nest/node_modules",
+        "to": "api-nest/node_modules"
+      },
+      {
+        "from": "../api-nest/package.json",
+        "to": "api-nest/package.json"
+      },
+      {
+        "from": "../api-nest/starfish.db",
+        "to": "api-nest/starfish.db"
+      },
+      {
+        "from": "../.env",
+        "to": ".env"
+      },
+      {
+        "from": "../.env.secret",
+        "to": ".env.secret"
+      },
+      {
+        "from":"../ollama/docker-compose.yml",
+        "to":"ollama/docker-compose.yml"
+      },
+      {
+        "from":"../redis/docker-compose.yml",
+        "to":"redis/docker-compose.yml"
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "starfishICON.ico"
+    },
+    "afterPack": "./scripts/afterPack.js"
+  }
+}

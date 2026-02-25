@@ -1,0 +1,12 @@
+{
+    "scripts": {
+        "api-nest:build": "cd api-nest && npm run build",
+        "webapp:build": "cd webapp && npm run build",
+        "electron:build": "cd electron && npm run build",
+        "electron:rebuild":"cd electron && npm run electron-rebuild",
+        "build": "npm run api-nest:build && npm run webapp:build && npm run electron:build && npm run electron:rebuild"
+    },
+    "devDependencies": {
+        "electron-rebuild": "^3.2.9"
+    }
+}

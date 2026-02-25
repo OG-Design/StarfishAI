@@ -19,12 +19,13 @@ export class AuthController {
 
         // if no session
         if (!user) {
-            console.log(user)
+            console.log('No user returned from validateUser:', user);
             return res.status(401).json({ message: 'Invalid credentials'});
         }
 
         // save session with user info
-        req.session.user=user;
+        req.session.user = user;
+        console.log('Session after login:', req.session);
 
         console.log("Making JWT token for user,", user.username);
 
@@ -33,8 +34,7 @@ export class AuthController {
             {idUser: user.idUser, username: user.username}, //payload
             secretJWT, // token secret CHANGE
             {expiresIn: '1h'} // expiration time
-        )
-
+        );
 
         // set cookie http only
         res.cookie('jwt', token, {
@@ -46,7 +46,6 @@ export class AuthController {
         });
 
         console.log("Token generated:\n", token);
-
         return res.json({ message: "Logged in successfully" });
     }
 

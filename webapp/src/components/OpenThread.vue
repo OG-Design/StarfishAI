@@ -11,6 +11,11 @@ const md = new MarkdownIt();
 const props = defineProps<{title: string, index: number, idThread: number, models: any[]}>();
 
 import type { ModelOption } from '../types/ModelOption';
+import { apiFetch } from '../composables/useApi';
+
+
+const isElectron = typeof window !== "undefined" && window.location.protocol === "file:";
+const assetBase = isElectron ? './animation/' : '/animation';
 
 
 // define referene for the title
@@ -28,9 +33,9 @@ const isLoading = ref(false);
 const emit = defineEmits(['updateThreadTitle']);
 
 
-const promptAnimationPoster = '/animation/ArrowToStop-poster.png';
-const promptAnimationForward = '/animation/ArrowToStop.apng';
-const promptAnimationReverse = '/animation/StopToArrow.apng';
+const promptAnimationPoster = assetBase + '/ArrowToStop-poster.png';
+const promptAnimationForward = assetBase + '/ArrowToStop.apng';
+const promptAnimationReverse = assetBase + '/StopToArrow.apng';
 const promptAnimationSrc = ref(promptAnimationPoster);
 
 
@@ -76,7 +81,7 @@ const thread = props.idThread;
 
 async function getAllMessages() {
 
-  const res = await fetch(`/api/ai/thread/id/${thread}/messages`, {
+  const res = await apiFetch(`/api/ai/thread/id/${thread}/messages`, {
     credentials: 'include'
   });
   const data = await res.json();
@@ -101,31 +106,31 @@ const prompt = ref(null);
 
 
 // sends a prompt and awaits the response
-async function handlePromptFallback() {
-  isLoading.value = true;
-  const body = {
-    model: "llama3",
-    message: {
-      role: "user",
-      content: prompt.value
-    },
-    thread: props.idThread
-  }
-  const res = await fetch('/api/ai/chat', {
-    method: "POST",
-    headers: {
-        'Content-Type':'application/json'
-    },
-    body: JSON.stringify(body)
-  })
+// async function handlePromptFallback() {
+//   isLoading.value = true;
+//   const body = {
+//     model: "llama3",
+//     message: {
+//       role: "user",
+//       content: prompt.value
+//     },
+//     thread: props.idThread
+//   }
+//   const res = await fetch('/api/ai/chat', {
+//     method: "POST",
+//     headers: {
+//         'Content-Type':'application/json'
+//     },
+//     body: JSON.stringify(body)
+//   })
 
-  getAllMessages();
+//   getAllMessages();
 
-  console.log(await res);
+//   console.log(await res);
 
-  isLoading.value = false;
+//   isLoading.value = false;
 
-}
+// }
 
 // joins the chunks currently done.
 const currentMessage = computed(()=>aiChunks.value.join(''));
@@ -210,7 +215,8 @@ async function handleThreadChange() {
   }
 
   // the request made to the api
-  const res = await fetch("/api/ai/thread/alter", {
+  // const res = 
+  await apiFetch("/api/ai/thread/alter", {
     method:"POST",
     headers: {
       "Content-Type":"application/json"
@@ -231,7 +237,8 @@ async function handlePersonalityChange() {
     personality: personality.value
   }
 
-  const res = await fetch("/api/ai/thread/alter/personality", {
+  // const res = 
+  await apiFetch("/api/ai/thread/alter/personality", {
     method: 'POST',
     headers: {
       "Content-Type":"application/json"

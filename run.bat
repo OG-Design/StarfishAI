@@ -1,5 +1,8 @@
 @echo off
 
+@REM SYNC .env
+start /d "./webapp" .\sync.env.bat
+
 start /d "./redis" docker-compose up -d
 start /d "./ollama" docker-compose up -d
 

@@ -26,6 +26,7 @@ export class UserController {
     }
 
     @Get('userGroup')
+    @UseGuards(SessionAuthGuard)
     getGroup(@Session() session: Record<string, any>) {
         return this.userService.getGroup(session);
     }

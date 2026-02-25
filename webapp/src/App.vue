@@ -6,6 +6,7 @@ import Login from './components/Login.vue';
 import Settings from './components/Settings.vue';
 import TopMenu from './components/TopMenu.vue';
 
+import { apiFetch } from './composables/useApi';
 
 import {ref} from 'vue'
 
@@ -23,10 +24,17 @@ const threadsAvailable = ref<thread[]>([]);
 
 // console.log(threadsAvailable.value);
 
-// creates reference selectedThread
-const selectedThread = ref();
-selectedThread.value = {idThread:0};
+const isElectron = typeof window !== "undefined" && window.location.protocol === "file:";
+const isFirstRun = isElectron && !localStorage.getItem("isFirstRun");
 
+if (isFirstRun) {
+  localStorage.clear();
+  localStorage.setItem("isFirstRun", "false");
+}
+
+// creates reference selectedThread
+const selectedThread = ref({title:"",idThread:0});
+selectedThread.value={title:"",idThread:0};
 
 const storedModels = localStorage.getItem("models");
 const storedSelectedGroup = localStorage.getItem("selectedGroup");
@@ -38,7 +46,7 @@ const selectedGroup:any = ref(storedSelectedGroup ? JSON.parse(storedSelectedGro
 
 // fetch all threads available to user
 async function getAllThreads() {
-  const res = await fetch('/api/ai/thread/all');
+  const res = await apiFetch('/api/ai/thread/all');
   const data = await res.json();
 
   // console.log(data);
@@ -54,7 +62,7 @@ async function getAllThreads() {
 
 // check if there is a valid session
 async function checkSession() {
-  const res = await fetch('/api/auth/check', { credentials: 'include'});
+  const res = await apiFetch('/api/auth/check', { credentials: 'include'});
 
   const loggedIn = await res.json();
 
@@ -139,7 +147,7 @@ function updateModels(payload: any) {
 
 
 async function fetchUserGroup() {
-    const res = await fetch("/api/user/userGroup", {
+    const res = await apiFetch("/api/user/userGroup", {
         method: 'GET',
         headers: {
             "Content-Type":"application/json"
@@ -176,7 +184,7 @@ async function fetchModelsByGroup() {
         }
     }
 
-    const res = await fetch("/api/ai/model/all", {
+    const res = await apiFetch("/api/ai/model/all", {
         method: 'POST',
         headers: {
             "Content-Type":"application/json"
@@ -196,9 +204,58 @@ async function fetchModelsByGroup() {
 
 console.log("LocalStorage: \n", localStorage.getItem("models"), "\n", localStorage.getItem("selectedGroup"));
 
+
+let devMode = false;
+let alphaMode = true;
+
 </script>
 
 <template>
+  <div v-if="devMode" style="
+  max-width: 0;
+  max-height: 0;
+  margin-left: calc(50vw - 125px);
+  margin-top: 5rem;
+  position: absolute;
+  z-index: 10000;
+  pointer-events: none;
+  ">
+  <p style="
+  width: 250px;
+  height: fit-content;
+  font-size: 20px;
+  background-color: hsla(0, 100%, 50%, .25);
+  color: hsla(0, 100%, 70%, 1);
+  text-align: center;
+  margin: 0 auto;
+  
+  ">
+    Warning, this App is in dev mode! It may be unstable
+  </p>
+  </div>
+  <div v-if="alphaMode" style="
+  max-width: 0;
+  max-height: 0;
+  margin-left: calc(50vw - 125px);
+  margin-top: 5rem;
+  position: absolute;
+  z-index: 10000;
+  pointer-events: none;
+  ">
+  <p style="
+  width: 250px;
+  height: fit-content;
+  font-size: 20px;
+  background-color: hsla(60, 100%, 50%, .25);
+  color: hsla(60, 100%, 70%, 1);
+  text-align: center;
+  margin: 0 auto;
+  
+  ">
+    Warning, this App is in alpha! It may be unstable
+  </p>
+  </div>
+
   <!-- Handles login -->
   <Login v-if="!authenticated" :authenticated="authenticated" @updateThreadsAvailable="handleUpdateThreadsAvailable"/>
 
@@ -210,7 +267,13 @@ console.log("LocalStorage: \n", localStorage.getItem("models"), "\n", localStora
     <!-- Handles thread selection through handleOpenThread_inParent and in child as handleOpenThread -->
     <ThreadsMenu :threadsAvailable="threadsAvailable" @openThread="handleOpenThread_inParent" @updateThreadsAvailable="handleUpdateThreadsAvailable" @updateModels="updateModels"/>
     <!-- Contains the open thread -->
-    <OpenThread :title="selectedThread.title || 'No thread selected'" :index="selectedThread.idThread || null" :idThread="selectedThread.idThread" :key="selectedThread.idThread" @updateThreadTitle="handleUpdateThreadTitle" :models="models"/>
+    <OpenThread 
+    :title="selectedThread && selectedThread.title ? selectedThread.title : 'No thread selected'" 
+    :index="selectedThread && selectedThread.idThread ? selectedThread.idThread : 0" 
+    :idThread="selectedThread && selectedThread.idThread ? selectedThread.idThread : 0" 
+    :key="selectedThread && selectedThread.idThread ? selectedThread.idThread : 0" 
+    @updateThreadTitle="handleUpdateThreadTitle" 
+    :models="models"/>
   </template>
 </template>
 
