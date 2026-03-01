@@ -115,6 +115,7 @@ function handleUpdateThreadsAvailable(payload: object = {empty: "empty"}) {
   getAllThreads();
 }
 
+
 const settingsIsOpen = ref(false);
 
 function handleOpenSettings() {
@@ -123,12 +124,11 @@ function handleOpenSettings() {
   console.log("settingsIsOpen:" )
 }
 
-
 function updateModels(payload: any) {
   console.log("Updating modelsAvailable with:\n", payload);
 
   if( payload ) {
-  models.value=payload;
+    models.value=payload;
   }
 
   if (models.value && models.value.length > 0) {
@@ -137,11 +137,14 @@ function updateModels(payload: any) {
 
   if (selectedGroup.value && selectedGroup.value.userGroup_idUserGroup) {
     localStorage.setItem("selectedGroup", JSON.stringify(selectedGroup.value));
-
     console.log("Selecting group:", selectedGroup.value.userGroup_idUserGroup, " ", selectedGroup.value.name);
   }
+}
 
-
+function handleUpdateSelectedGroup(group: any) {
+  selectedGroup.value = group;
+  localStorage.setItem("selectedGroup", JSON.stringify(group));
+  console.log("App.vue: Synced selected group:", group);
 }
 
 
@@ -261,7 +264,7 @@ let alphaMode = true;
 
   <TopMenu @openSettings="handleOpenSettings"/>
   <template v-if="settingsIsOpen" :key="settingsIsOpen">
-    <Settings @updateModels="updateModels" @openSettings="handleOpenSettings"/>
+    <Settings @updateModels="updateModels" @openSettings="handleOpenSettings" @updateSelectedGroup="handleUpdateSelectedGroup"/>
   </template>
   <template v-if="authenticated" :key="authenticated">
     <!-- Handles thread selection through handleOpenThread_inParent and in child as handleOpenThread -->
@@ -280,17 +283,4 @@ let alphaMode = true;
 <style lang="scss" scoped>
 $border-radius: 2rem;
 $space: 1rem;
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-
 </style>

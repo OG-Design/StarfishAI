@@ -360,7 +360,7 @@ $space: 1rem;
   transition: .2s;
 
   &:hover {
-    border: 1px solid #8B5CF6;
+    border: 1px solid $key-1;
   }
 }
 
@@ -439,7 +439,7 @@ $space: 1rem;
 #prompt {
   width: calc(100% - $space );
   height: 20%;
-  background-color: #171A21;
+  background-color: $bg-2;
 
   display: flex;
   flex-direction: row;
@@ -469,19 +469,20 @@ $space: 1rem;
 
     resize: none;
 
-    background-color: #1E2230;
+    background-color: $bg-ac-1;
+    color: $text-1;
 
     border: solid 1px #1E2230;
     border-radius: $border-radius;
 
     &:active, &:focus {
-      border: solid 1px #646cff;
+      border: solid 1px $key-2;
     }
 
     transition: .2s;
 
     &:hover {
-      border: 1px solid #646cff;
+      border: 1px solid $key-2;
     }
 
   }
@@ -553,9 +554,9 @@ $space: 1rem;
   padding: $space;
 
   border-radius: $border-radius;
-  border: 1px solid #171A21;
+  border: 1px solid $bg-2;
 
-  background-color: #171A21;
+  background-color: $bg-2;
 
   transition: .2s;
 
@@ -563,7 +564,7 @@ $space: 1rem;
 }
 
 .message:hover {
-  border: 1px solid #8B5CF6;
+  border: 1px solid $key-1;
 }
 
 .message-user {
@@ -574,7 +575,7 @@ $space: 1rem;
   justify-items: end;
 }
 .message-user:hover {
-  border: 1px solid #646cff;
+  border: 1px solid $key-2;
 }
 
 #model-selector {
@@ -595,7 +596,8 @@ $space: 1rem;
     border: solid 1px hsla(237, 100%, 70%, .2);
     border-radius: $border-radius;
 
-    background-color: hsla(237, 100%, 70%, .05);
+    background-color: $bg-alpha-1;
+    color: $text-1;
 
     backdrop-filter: blur(8px);
 

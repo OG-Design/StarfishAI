@@ -226,6 +226,7 @@ export class AiService {
                 try {
                     console.log("Starting async logic...")
 
+
                     const checkUserPermission: any = db.prepare(`
                         SELECT 
                         -- groupMembers
@@ -238,7 +239,13 @@ export class AiService {
                         WHERE groupMember.user_idUser = ? AND userGroup.idUserGroup = ?
                     `).all(idUser, idGroup);
 
-                    console.log("A User with id:", idUser," is trying to add model on group with id:", idGroup, ".\n result of query: \n", checkUserPermission);
+                    console.log("DEBUG: addModel permission check");
+                    console.log("idUser:", idUser);
+                    console.log("idGroup:", idGroup);
+                    console.log("checkUserPermission result:", checkUserPermission);
+                    if (checkUserPermission.length > 0) {
+                        console.log("groupMemberPermissionLevel:", checkUserPermission[0].groupMemberPermissionLevel);
+                    }
 
                     // check if user has admin privileges 
                     if (checkUserPermission.length==0 || checkUserPermission[0].groupMemberPermissionLevel != "admin") {

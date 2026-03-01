@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Session, UseGuards, Sse} from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Session, UseGuards, Sse, Query} from '@nestjs/common';
 
 import { SessionAuthGuard } from 'src/auth/session-auth.guard';
 
@@ -59,22 +59,21 @@ export class AiController {
         return await this.aiService.useModel(body.model, body.message, body.thread, session);
     }
 
-    @Post('model/add')
+    @Get('model/add')
     @Sse()
     addModel(
         @Session() session: Record<string, any>,
-        @Body() body: {
-            model: {
-                name: string,
-                fullName: string
-            },
-            group: {
-                name: string,
-                idUserGroup: number
-            }
-        }
+        @Query('modelName') modelName: string,
+        @Query('modelFullName') modelFullName: string,
+        @Query('groupName') groupName: string,
+        @Query('groupId') groupId: number,
     ): Observable<MessageEvent> {
-        return this.aiService.addModel(body.model, body.group, session);
+        console.log("DEBUG: ADDING MODEL");
+
+        const model = { name: modelName, fullName: modelFullName };
+        const group = { name: groupName, idUserGroup: Number(groupId)};
+
+        return this.aiService.addModel(model, group, session);
     }
 
     @Post('model/all')

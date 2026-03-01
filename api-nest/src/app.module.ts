@@ -11,6 +11,8 @@ import { AiController } from './ai/ai.controller';
 import { AiService } from './ai/ai.service';
 import { ChateventGateway } from './chatevent/chatevent.gateway';
 import { ConfigModule } from '@nestjs/config';
+import { SystemService } from './system/system.service';
+import { SystemController } from './system/system.controller';
 
 @Module({
   imports: [
@@ -28,7 +30,7 @@ import { ConfigModule } from '@nestjs/config';
       ignoreEnvFile: false, // keeps .env from loading defaults
     })
   ],
-  controllers: [AppController, UserController, AuthController, AiController],
-  providers: [AppService, UserService, AuthService, AiService, ChateventGateway],
+  controllers: [AppController, UserController, AuthController, AiController, SystemController],
+  providers: [AppService, UserService, AuthService, AiService, ChateventGateway, SystemService],
 })
 export class AppModule {}

@@ -2,11 +2,26 @@
 import { defineEmits, nextTick, onMounted, ref } from 'vue';
 import { apiFetch, API_BASE } from '../composables/useApi';
 
+
 const emit = defineEmits(["openSettings", "updateModels"]);
 
 function handleSettingsMenu() {
     emit("openSettings");
 }
+
+function handleGroupChange() {
+    const group = groups.value.find(g => g.userGroup_idUserGroup === selectedGroupId.value);
+    if (group) {
+        selectedGroup.value = group;
+        emit('updateSelectedGroup', group);
+        console.log("Changed selected group:", group);
+        fetchModelsByGroup();
+    } else {
+        console.warn("No group found for id:", selectedGroupId.value);
+    }
+}
+
+const isElectron = typeof window !== "undefined" && window.location.protocol === "file:";
 
 const isLoading = ref(false);
 
@@ -18,6 +33,12 @@ const addFullName = ref("");
 const responseAddModel = ref("");
 const editMode_models = ref(false);
 const selectedModels = ref([]);
+const selectedGroupId = ref(null);
+
+import { watch } from 'vue';
+watch(selectedGroup, (newVal) => {
+    console.log('selectedGroup changed:', newVal);
+});
 
 // fetch groups accessible by user (userGroup contains models)
 async function fetchUserGroup() {
@@ -30,12 +51,14 @@ async function fetchUserGroup() {
 
     const groupsRes = await res.json();
 
-    groups.value=groupsRes;
-
-    selectedGroup.value = groupsRes[0];
-    console.log("Selected group:", groupsRes[0]);
-
-    console.log("UserGroups: \n", groups.value);
+        groups.value = groupsRes;
+        if (groupsRes.length > 0) {
+            selectedGroupId.value = groupsRes[0].userGroup_idUserGroup;
+            selectedGroup.value = groupsRes[0];
+            emit('updateSelectedGroup', groupsRes[0]);
+        }
+        console.log("Selected group:", selectedGroup.value);
+        console.log("UserGroups: \n", groups.value);
 }
 
 
@@ -70,24 +93,25 @@ async function fetchModelsByGroup() {
 const downloadPercentage = ref("");
 
 async function addModelToGroup() {
+    console.log("running addModelToGroup()");
+
     isLoading.value=true;
     responseAddModel.value="Loading...";
 
-    const body = {
-        model: {
-                name: addName.value,
-                fullName: addFullName.value
-            },
-        group: {
-            name: selectedGroup.value.name,
-            idUserGroup: selectedGroup.value.userGroup_idUserGroup
-        }
-    }
-    console.log("addModelToGroup, Body: \n", body);
+    const params = new URLSearchParams({
+            modelName: addName.value,
+            modelFullName: addFullName.value,
+            groupName: selectedGroup.value.name,
+            groupId: selectedGroup.value.userGroup_idUserGroup
+    });
+
+    console.log("addModelToGroup, Body: \n", params);
     
+    try {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${API_BASE}/api/ai/model/add`, true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.open('GET', `${API_BASE}/api/ai/model/add?${params.toString()}`, true);
+    // xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.withCredentials = true;
     xhr.setRequestHeader('Accept', 'text/event-stream');
 
     let lastIndex = 0;
@@ -123,33 +147,34 @@ async function addModelToGroup() {
         responseAddModel.value = "Error";
     }
 
-    xhr.send(JSON.stringify(body));
-    
-    // const res = await fetch('/api/ai/model/add', {
-    //     method: 'POST',
-    //     headers: {
-    //         'Content-Type':'application/json'
-    //     },
-    //     body: JSON.stringify(body)
-    // })
+    xhr.send();
 
-    // res.onmessage = (event) => {
-    //     const data = JSON.parse(event.data);
-    //     console.log(data.status, data.progress + '%');
-    // }
+    } catch (err) {
+        console.error("XHR error:", err);
+    }
+}
 
-    // res.onerror = () => {
-    //     console.log("Error occured while downloading");
-    //     res.close();
-    // }    
+const ollamaConfig = ref<Object>({
 
-    // console.log("Result of adding model:");
+})
 
-    // Re-fetch to update DOM
-    
+async function getOllamaConfig() {
+    console.log("running getOllamaConfig()");
+    const res = await apiFetch('/api/system/compose/ollama',{
+        method: 'GET',
+        headers: {
+            "Content-Type":"application/json"
+        }
+    });
 
+
+    const data = await res.json();
+
+    console.log("Response:", data);
 
 }
+
+getOllamaConfig();
 
 function toggleEditMode() {
     editMode_models.value = !editMode_models.value;
@@ -204,7 +229,7 @@ onMounted(async () => {
                             <tr>
                                 <th><input type="text" name="" id="modelName" placeholder="name" v-model="addName"></th>
                                 <th><input type="text" name="" id="modelFullName" placeholder="fullname" v-model="addFullName"></th>
-                                <th><button @click="addModelToGroup">Add</button></th>
+                                <th><button type="button" @click="addModelToGroup">Add</button></th>
                                 <th>
                                     <div v-if="isLoading" class="loading-gif-container-settings"><img class="loading-gif-settings" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""><span>{{ downloadPercentage }}%</span></div>
                                     <div v-else class="loading-gif-container-settings"></div>
@@ -212,8 +237,26 @@ onMounted(async () => {
                             </tr>
                         </tbody>
                     </table>
-                    <select v-model="selectedGroup" :key="selectedGroup" @change="fetchModelsByGroup">
-                        <option v-for="(group, index) in groups" :value="group">{{group.name, group.userGroup_idUserGroup}}</option>
+                    <select v-model="selectedGroupId" @change="handleGroupChange">
+                        <option v-for="(group, index) in groups" :value="group.userGroup_idUserGroup" :key="index">
+                            {{ group.name }}
+                        </option>
+                    </select>
+                </div>
+            </li>
+            <li  
+            class="flex-column">
+                <h2>System</h2>
+
+                <div class="tile-column">
+                    <h3>AI Proccessor</h3>
+                    <select>
+                        <option value="nvidia">
+                            Nvidia GPU
+                        </option>
+                        <option value="cpu">
+                            CPU
+                        </option>
                     </select>
                 </div>
             </li>
@@ -251,10 +294,10 @@ h1 {
 
     height: 100%;
 
-    background-color: #171A21;
+    background-color: $bg-1;
 
     border-radius: $border-radius;
-    border: 1px solid #8B5CF6;
+    border: 1px solid $key-1;
 
     offset: 0;
     list-style: none;
@@ -273,7 +316,7 @@ h1 {
 
         border-radius: $border-radius;
 
-        background-color: #222630;
+        background-color: $bg-1;
     }
     #settings-header {
         background: transparent;
@@ -299,7 +342,26 @@ h1 {
 
         font-size: 18px;
         border-radius: $border-radius;
-        border: 1px solid #8B5CF6;
+        border: 1px solid $key-1;
+    }
+}
+
+.tile-column {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: clamp(200px, 50%, 300px);
+    background-color: $bg-ac-1;
+    border-radius: $border-radius;
+    padding: $space;
+    
+    h3 {
+        align-self: flex-start;
+    }
+
+    select {
+        min-width: 200px;
     }
 }
 
@@ -307,7 +369,7 @@ h1 {
     width: 100%;
     max-width: 400px;
     height: fit-content;
-    background-color: hsla(0, 0%, 85%, .2);
+    background-color: $bg-ac-1;
     border-radius: $border-radius;
     padding: $settings-space;
 
@@ -320,6 +382,13 @@ h1 {
                 font-weight:normal;
             }
         }
+    }
+    input {
+        color: $text-2;
+        background-color: $bg-ac-1;
+        border: 1px solid $key-1;
+        border-radius: $border-radius;
+        padding: $space-1;
     }
 }
 
@@ -334,6 +403,7 @@ h1 {
     background-color: transparent;
     background: transparent;
     border: none;
+    color: $text-2;
 
 }
 
@@ -355,16 +425,19 @@ $scale-gif:50px;
     width: $scale-gif;
 }
 
-
-@media screen and (max-width: 1500px) {
-  .fill {
-    padding: $space;
-  }
-}
-
-@media screen and (max-height: 800px) {
-  .fill {
-    padding: $space;
-  }
+@media (max-width: 1200px) {
+    .fill {
+        padding: 1rem;
+    }
+    #settings-menu {
+        .flex-row {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            gap: $settings-space;
+        }
+    }
 }
 </style>

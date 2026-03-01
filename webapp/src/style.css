@@ -48,13 +48,17 @@ html, body {
 
 
 
-  background-color: #12141A;
+  background-color: var(--bg-1);
 }
 
 
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
+}
+
+select {
+  color: var(--text-1);
 }
 
 button {
