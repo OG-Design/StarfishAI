@@ -8,7 +8,7 @@ import TopMenu from './components/TopMenu.vue';
 
 import { apiFetch } from './composables/useApi';
 
-import {ref} from 'vue'
+import {onMounted, ref} from 'vue'
 
 // imports selectedThread type
 import type {selectedThread} from './types/selectedThread'
@@ -207,6 +207,14 @@ async function fetchModelsByGroup() {
 
 console.log("LocalStorage: \n", localStorage.getItem("models"), "\n", localStorage.getItem("selectedGroup"));
 
+const rotateMenuButton = ref(false);
+function toggleMenu() {
+  console.log("Toggling menu");
+  rotateMenuButton.value = !rotateMenuButton.value;
+  document.getElementById("app")?.classList.toggle("menu-expanded");
+}
+
+
 
 let devMode = false;
 let alphaMode = true;
@@ -259,6 +267,8 @@ let alphaMode = true;
   </p>
   </div>
 
+  <button id="toggle-menu-button" v-on:click="toggleMenu" :class="rotateMenuButton ? 'rotate-menu-button' : ''">→</button>
+
   <!-- Handles login -->
   <Login v-if="!authenticated" :authenticated="authenticated" @updateThreadsAvailable="handleUpdateThreadsAvailable"/>
 
@@ -281,6 +291,35 @@ let alphaMode = true;
 </template>
 
 <style lang="scss" scoped>
+#toggle-menu-button {
+  width: 50px;
+  height: 50px;
+
+  z-index: 101;
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: var(--space);
+  display: none;
+
+  background: none;
+  border: none;
+
+  font-size: 24px;
+  font-weight: bold;
+}
+
+@media screen and (max-width:500px) {
+  #toggle-menu-button {
+    display: block;
+  }
+  .rotate-menu-button {
+    transform: rotateY(180deg);
+  }
+}
+
+
 $border-radius: 2rem;
 $space: 1rem;
 </style>

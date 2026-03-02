@@ -333,10 +333,9 @@ $shadow: 0px 0px 16px 0px rgba(0,0,0,.5);
 
 $border-radius: 1rem;
 
-$space: 1rem;
 
 #system-prompt {
-  width: calc(100% - $space * 2);
+  width: calc(100% - var(--space) * 2);
   height: auto;
   min-height: 50px;
 
@@ -345,10 +344,10 @@ $space: 1rem;
   border: solid 1px #1E2230;
   border-radius: $border-radius;
 
-  margin: $space;
+  margin: var(--space);
   margin-bottom: 0;
 
-  padding: $space;
+  padding: var(--space);
 
   box-sizing: border-box;
 
@@ -369,9 +368,9 @@ $space: 1rem;
   width: fit-content;
   position: absolute;
   z-index: 10;
-  margin-left: $space;
-  top: calc($space * 2);
-  padding: $space;
+  margin-left: var(--space);
+  top: calc(var(--space) * 2);
+  padding: var(--space);
   box-sizing: border-box;
 
   input {
@@ -380,7 +379,7 @@ $space: 1rem;
 
     font-size: 24px;
 
-    padding-left: $space;
+    padding-left: var(--space);
 
     background-color: transparent;
     border: solid 1px hsla(237, 100%, 70%, .2);
@@ -415,8 +414,8 @@ $space: 1rem;
 }
 
 #thread {
-  height: calc(100% - $space * 2);
-  width: calc(100% - $space * 2);
+  height: calc(100% - var(--space) * 2);
+  width: calc(100% - var(--space) * 2);
 
   display: flex;
   flex-direction: column;
@@ -425,19 +424,19 @@ $space: 1rem;
 
   overflow-y: scroll;
 
-  margin: $space;
+  margin: var(--space);
   margin-bottom: 0;
   margin-top: 0;
-  padding-top: calc($space * 5);
-  padding-bottom: calc($space * 10);
-  gap: calc($space * 5);
+  padding-top: calc(var(--space) * 5);
+  padding-bottom: calc(var(--space) * 10);
+  gap: calc(var(--space) * 5);
 
   box-sizing: border-box;
 
 }
 
 #prompt {
-  width: calc(100% - $space );
+  width: calc(100% - var(--space) );
   height: 20%;
   background-color: $bg-2;
 
@@ -446,14 +445,14 @@ $space: 1rem;
   justify-content: space-between;
   align-items: center;
 
-  gap: $space;
+  gap: var(--space);
   margin: 0;
-  margin-left: calc($space / 2);
-  // margin-right: calc($space / 2);
-  margin-bottom: $space;
+  margin-left: calc(var(--space) / 2);
+  // margin-right: calc(var(--space) / 2);
+  margin-bottom: var(--space);
 
-  padding-left: $space;
-  padding-right: $space;
+  padding-left: var(--space);
+  padding-right: var(--space);
 
   border-radius: $border-radius;
 
@@ -465,7 +464,7 @@ $space: 1rem;
   textarea {
 
     width: 80%;
-    height: calc(100% - $space * 2);
+    height: calc(100% - var(--space) * 2);
 
     resize: none;
 
@@ -488,10 +487,10 @@ $space: 1rem;
   }
 
 
-  $btn-size: 100px;
+  $btn-size: 50px;
   $btn-size-increased: calc($btn-size * 1.2);
   div {
-    width: calc($btn-size-increased + $space);
+    width: calc($btn-size-increased + var(--space));
     display: flex;
     justify-content: center;
     align-items: center;
@@ -551,7 +550,7 @@ $space: 1rem;
 
   box-sizing: border-box;
 
-  padding: $space;
+  padding: var(--space);
 
   border-radius: $border-radius;
   border: 1px solid $bg-2;
@@ -582,7 +581,7 @@ $space: 1rem;
   position: absolute;
   width: 100px;
   bottom: 20%;
-  padding-left: calc($space * 2);
+  padding-left: calc(var(--space) * 2);
 
   select {
     height: 100%;
@@ -590,7 +589,7 @@ $space: 1rem;
 
     font-size: 24px;
 
-    padding-left: $space;
+    padding-left: var(--space);
 
     background-color: transparent;
     border: solid 1px hsla(237, 100%, 70%, .2);
@@ -678,7 +677,7 @@ $space: 1rem;
     border-radius: 6px;
     padding: 1rem;
     overflow-x: scroll;
-    width: calc(100% - $space * 2);
+    width: calc(100% - var(--space) * 2);
     margin: 1rem 0;
 
     code {
@@ -783,5 +782,23 @@ $space: 1rem;
     margin: 0.5rem 0;
   }
 }
+
+@media screen and (max-width:500px) {
+
+  #thread-main {
+    min-width: 100vw;
+  }
+
+  #top-menu {
+    max-width: calc(100% - var(--space) * 4);
+    overflow: hidden;
+    input {
+      max-width: calc(40vw - var(--space) * 4);
+      min-width: none;
+    }
+  }
+
+}
+
 </style>
 

@@ -18,3 +18,32 @@ $key-2: #646cff88;
 
 $text-1: rgba(255, 255, 255, 0.87);
 $text-2: #fff;
+
+:root {
+    --space: #{$space};
+    --space-1: #{$space-1};
+    --space-2: #{$space-2};
+    --settings-space: #{$settings-space};
+    --shadow: #{$shadow};
+    --border-radius: #{$border-radius};
+
+    --bg-1: #{$bg-1};
+    --bg-2: #{$bg-2};
+    --bg-ac-1: #{$bg-ac-1};
+    --bg-alpha-1: #{$bg-alpha-1};
+
+    --key-1: #{$key-1};
+    --key-1-alpha: #{$key-1-alpha};
+    --key-2: #{$key-2};
+
+    --text-1: #{$text-1};
+    --text-2: #{$text-2};
+}
+
+@media screen and (max-width: 500px) {
+    :root {
+        --space: .5rem;
+        --space-1: .2rem;
+        --space-2: .1rem;
+    }
+}
