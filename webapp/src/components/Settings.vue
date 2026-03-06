@@ -1,7 +1,7 @@
 <script setup>
 import { defineEmits, nextTick, onMounted, ref } from 'vue';
 import { apiFetch, API_BASE } from '../composables/useApi';
-
+import { nvidiaConfig, cpuConfig } from '../composables/useAiConfig';
 
 const emit = defineEmits(["openSettings", "updateModels"]);
 
@@ -170,11 +170,42 @@ async function getOllamaConfig() {
 
     const data = await res.json();
 
-    console.log("Response:", data);
+    console.log("Response getOllamaConfig():", data);
 
 }
 
+
+
 getOllamaConfig();
+
+const aiProccessorRef = ref();
+
+async function handleAiProccessorChange() {
+    console.log("running handleAiProccessorChange()");
+    
+
+
+    const val = aiProccessorRef.value;
+    const body = {
+        val
+    };
+
+    console.log("aiProccessorRef.value:", val);
+
+    const res = await apiFetch('/api/system/compose/ollama',{
+        method: 'POST',
+        headers: {
+            "Content-Type":"application/json"
+        },
+        body
+    });
+
+
+    const data = await res.json();
+
+    console.log("Response handleAiProccessorChange():", data);
+}
+
 
 function toggleEditMode() {
     editMode_models.value = !editMode_models.value;
@@ -183,6 +214,7 @@ function toggleEditMode() {
 function deleteSelectedModels() {
     console.log("Deleting models: \n", selectedModels.value);
 }
+
 
 onMounted(async () => {
     nextTick();
@@ -250,14 +282,15 @@ onMounted(async () => {
 
                 <div class="tile-column">
                     <h3>AI Proccessor</h3>
-                    <select>
-                        <option value="nvidia">
+                    <select v-model="aiProccessorRef">
+                        <option :value="nvidiaConfig">
                             Nvidia GPU
                         </option>
-                        <option value="cpu">
+                        <option :value="cpuConfig">
                             CPU
                         </option>
                     </select>
+                    <button @click="handleAiProccessorChange">Apply</button>
                 </div>
             </li>
         </ul>

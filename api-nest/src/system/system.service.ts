@@ -1,12 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 
 import * as yaml from 'js-yaml';
 import * as fs from 'fs';
 import * as path from 'path';
 @Injectable()
 export class SystemService {
+    constructor() {
+        this.ollamaPath=path.join(process.cwd(), '../', 'ollama', 'docker-compose.yml');
+    }
+    private readonly ollamaPath: string;
+    
     getComposeConfig() {
-        let ollamaPath: string;
 
         if (process.env.ELECTRON_MODE === 'true') {
             
@@ -14,20 +18,28 @@ export class SystemService {
 
         }
         
-        try {
+        try {        
 
-        ollamaPath = path.join(process.cwd(), '../', 'ollama', 'docker-compose.yml')
+            console.log("Ollama config path: ", this.ollamaPath);
 
-        console.log("Ollama config path: ", ollamaPath);
+            const ollamaConfig = yaml.load(fs.readFileSync(this.ollamaPath), 'utf-8');
 
-        const ollamaConfig = yaml.load(fs.readFileSync(ollamaPath), 'utf-8');
+            console.log("Ollama configuration loaded:", ollamaConfig);
 
-        console.log("Ollama configuration loaded:", ollamaConfig);
+            return ollamaConfig;
 
-        return ollamaConfig;
         } catch (err) {
-            console.error("eror getting ollama config:", err);
+            console.error("error getting ollama config:", err);
         }
 
+    }
+
+    postComposeConfig() {
+        try {
+            
+        } catch (error) {
+            console.error("error committing ollama config:", error);
+            return new InternalServerErrorException("Internal server error");
+        }
     }
 }
