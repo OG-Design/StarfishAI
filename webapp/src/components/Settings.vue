@@ -1,7 +1,9 @@
 <script setup>
-import { defineEmits, nextTick, onMounted, ref } from 'vue';
-import { apiFetch, API_BASE } from '../composables/useApi';
+import { nextTick, onMounted, ref } from 'vue';
+
+import { apiFetch, apiBase } from '../composables/useApi';
 import { nvidiaConfig, cpuConfig } from '../composables/useAiConfig';
+
 
 const emit = defineEmits(["openSettings", "updateModels"]);
 
@@ -109,7 +111,7 @@ async function addModelToGroup() {
     
     try {
     const xhr = new XMLHttpRequest();
-    xhr.open('GET', `${API_BASE}/api/ai/model/add?${params.toString()}`, true);
+    xhr.open('GET', `${apiBase.value}/api/ai/model/add?${params.toString()}`, true);
     // xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.withCredentials = true;
     xhr.setRequestHeader('Accept', 'text/event-stream');

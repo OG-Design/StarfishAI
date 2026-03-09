@@ -5,6 +5,7 @@ import OpenThread from './components/OpenThread.vue';
 import Login from './components/Login.vue';
 import Settings from './components/Settings.vue';
 import TopMenu from './components/TopMenu.vue';
+import Profile from './components/Profile.vue';
 
 import { apiFetch } from './composables/useApi';
 
@@ -124,6 +125,13 @@ function handleOpenSettings() {
   console.log("settingsIsOpen:" )
 }
 
+const profileIsOpen = ref(false);
+
+function handleOpenProfile() {
+  console.log("Opening profile in parent.");
+  profileIsOpen.value=!profileIsOpen.value;
+}
+
 function updateModels(payload: any) {
   console.log("Updating modelsAvailable with:\n", payload);
 
@@ -214,7 +222,9 @@ function toggleMenu() {
   document.getElementById("app")?.classList.toggle("menu-expanded");
 }
 
-
+function handleLogout() {
+  authenticated.value=false
+}
 
 let devMode = false;
 let alphaMode = true;
@@ -272,20 +282,23 @@ let alphaMode = true;
   <!-- Handles login -->
   <Login v-if="!authenticated" :authenticated="authenticated" @updateThreadsAvailable="handleUpdateThreadsAvailable"/>
 
-  <TopMenu @openSettings="handleOpenSettings"/>
+  <TopMenu @openSettings="handleOpenSettings" @openProfile="handleOpenProfile"/>
   <template v-if="settingsIsOpen" :key="settingsIsOpen">
     <Settings @updateModels="updateModels" @openSettings="handleOpenSettings" @updateSelectedGroup="handleUpdateSelectedGroup"/>
+  </template>
+  <template v-if="profileIsOpen" :key="profileIsOpen">
+    <Profile @openProfile="handleOpenProfile" @logout="handleLogout"/>
   </template>
   <template v-if="authenticated" :key="authenticated">
     <!-- Handles thread selection through handleOpenThread_inParent and in child as handleOpenThread -->
     <ThreadsMenu :threadsAvailable="threadsAvailable" @openThread="handleOpenThread_inParent" @updateThreadsAvailable="handleUpdateThreadsAvailable" @updateModels="updateModels"/>
     <!-- Contains the open thread -->
-    <OpenThread 
-    :title="selectedThread && selectedThread.title ? selectedThread.title : 'No thread selected'" 
-    :index="selectedThread && selectedThread.idThread ? selectedThread.idThread : 0" 
-    :idThread="selectedThread && selectedThread.idThread ? selectedThread.idThread : 0" 
-    :key="selectedThread && selectedThread.idThread ? selectedThread.idThread : 0" 
-    @updateThreadTitle="handleUpdateThreadTitle" 
+    <OpenThread
+    :title="selectedThread && selectedThread.title ? selectedThread.title : 'No thread selected'"
+    :index="selectedThread && selectedThread.idThread ? selectedThread.idThread : 0"
+    :idThread="selectedThread && selectedThread.idThread ? selectedThread.idThread : 0"
+    :key="selectedThread && selectedThread.idThread ? selectedThread.idThread : 0"
+    @updateThreadTitle="handleUpdateThreadTitle"
     :models="models"/>
   </template>
 </template>
@@ -298,7 +311,7 @@ let alphaMode = true;
   z-index: 101;
 
   position: absolute;
-  top: 0;
+  top: 50%;
   left: 0;
   margin: var(--space);
   display: none;

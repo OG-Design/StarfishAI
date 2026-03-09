@@ -227,6 +227,7 @@ async function handleDeleteThreads() {
         margin: 0;
 
         button {
+            word-break: break-all;
             text-align: start;
         }
 

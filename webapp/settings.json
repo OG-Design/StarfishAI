@@ -1,16 +1,5 @@
 {
-    "ai": {
-        "remote": {
-            "models": [
-
-            ],
-            "selectedModel":{}
-        },
-        "local": {
-            "models": [
-
-            ],
-            "selectedModel":{}
-        }
+    "remote": {
+        "url":"http://localhost:3000"
     }
 }

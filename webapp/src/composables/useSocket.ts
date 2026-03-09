@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import { io, Socket } from 'socket.io-client'; // used for socket functionallity
-import { apiFetch, API_BASE } from './useApi';
+import { apiFetch, apiBase } from './useApi';
 
 // defines the chunk storage
 export const aiChunks = ref<string[]>([]);
@@ -29,7 +29,7 @@ async function createSocket(): Promise<Socket | null> {
         return null;
     }
 
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || API_BASE;
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || apiBase.value;
     const s = io(socketUrl, {
         withCredentials: true
     });

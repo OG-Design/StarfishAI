@@ -24,7 +24,7 @@ function handleOpenProfile() {
 
 #controll-menu {
     width: 150px;
-    height: fit-content;
+    height: $top-menu-height;
 
 
     right: 0;
@@ -36,7 +36,6 @@ function handleOpenProfile() {
 
     padding: $space;
     gap: $space;
-
 
     button {
         $size: 50px;
@@ -52,7 +51,7 @@ function handleOpenProfile() {
 }
 
 #profile-btn {
- background-color: #7c7cff;
+    background-color: #7c7cff;
 }
 
 </style>

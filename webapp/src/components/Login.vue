@@ -81,9 +81,14 @@ onMounted(async () => {
 
 });
 
+
+const isLoading = ref(false);
+
 // Handles login
 async function handleLogin() {
+    isLoading.value=true;
 
+    // await new Promise((resolve)=> setTimeout(resolve, 10000));
     const body = {
         username: username.value,
         password: password.value
@@ -115,6 +120,8 @@ async function handleLogin() {
         // Emit object doUpdate, makes the threadMenu update it's selection
         emit("updateThreadsAvailable", {doUpdate: true});
     }
+
+    isLoading.value=false;
 
 }
 
@@ -159,14 +166,19 @@ async function handleRegister() {
     <template v-if="!authenticated">
         <section id="login-register">
             <form id="login-form" @submit.prevent="handleLogin">
+                <h3>Login</h3>
                 <label for="username">Username</label>
                 <input type="text" placeholder="username" v-model="username">
                 <label for="password">Password</label>
                 <input type="password" placeholder="******" v-model="password">
-                <button type="submit">Sign in</button>
+                <button type="submit" :disabled="isLoading ? true : false">Sign in</button>
+                <div v-if="isLoading" class="loading-gif-container"><img class="loading-gif" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
+                <div v-else class="loading-gif-container"></div>
             </form>
+
             <!-- Check if isRegisterable, if it is then render -->
             <form v-if="isRegisterable" id="register-form" @submit.prevent="handleRegister">
+                <h3>Register</h3>
                 <label for="username">Username</label>
                 <input type="text" placeholder="username" v-model="register_username">
                 <label for="password">Password</label>
@@ -187,26 +199,100 @@ async function handleRegister() {
 </template>
 
 
-<style scoped>
-#login-form {
-}
+<style scoped lang="scss">
+
 #login-register {
 
     width: 500px;
-    height: 150px;
-    left: calc(50vw - 300px + 50px );
+    height: fit-content;
+    padding: var(--space);
+    left: calc(50vw - 250px + 50px );
 
     top: 50vh;
     position: absolute;
     z-index: +100;
-    background-color: #555;
+
+    background-color: var(--bg-2);
+    border-radius: var(--border-radius);
 
     display: flex;
     flex-direction: row;
     justify-content: center;
     align-items: start;
 
-    padding: 50px;
     gap: 5px;
+
+
+    form {
+
+        width: 50%;
+        max-width: 50%;
+        display: flex;
+        flex-direction: column;
+
+        justify-content: center;
+        align-items: start;
+        padding: var(--space-2);
+        box-sizing: border-box;
+
+        gap: var(space);
+
+    }
+
+    label {
+        color: var(--text-1);
+    }
+
+    input {
+        width: 150px;
+        background-color: var(--bg-ac-1);
+        color: var(--text-1);
+        border: none;
+        border-radius: var(--border-radius);
+        font-size: var(--font-size-4);
+        padding: var(--space-2);
+        box-sizing: border-box;
+    }
+
+    button {
+        background-color: var(--key-1);
+
+        max-width: 100px;
+
+        margin: var(--space);
+        padding: var(--space-1);
+        border: none;
+        border-radius: var(--border-radius);
+
+        justify-self: center;
+
+        &:hover {
+            background-color: var(--key-1-bright);
+        }
+
+        &:active {
+            background-color: var(--key-1-alpha);
+        }
+    }
+
+}
+
+.loading-gif-container {
+    --scale-loading-gif: 50px;
+    min-width: var(--scale-loading-gif);
+    max-width: var(--scale-loading-gif);
+    min-height: var(--scale-loading-gif);
+    max-height: var(--scale-loading-gif);
+    position: static;
+
+    margin-top: calc(var(--space)*2);
+    padding: var(--space-2);
+    img {
+        min-height: inherit;
+        max-width: inherit;
+        min-height: inherit;
+        max-height: inherit;
+
+    }
 }
 </style>

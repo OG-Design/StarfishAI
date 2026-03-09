@@ -1,12 +1,21 @@
+import { ref } from 'vue';
+
 // Vite env vars only work during build, not at runtime in Electron bundles
 // Detect Electron (file:// protocol) and always use localhost for development
 const isElectron = typeof window !== "undefined" && window.location.protocol === "file:";
-export const API_BASE = isElectron ? "http://localhost:3000" : (import.meta.env.VITE_API_URL || "http://localhost:3000");
+const defaultBase = isElectron ? "http://localhost:3000" : (import.meta.env.VITE_API_URL || "http://localhost:3000");
+
+export const apiBase = ref<string>(localStorage.getItem('apiBase') || defaultBase);
+
+export function setApiBase(url: string) {
+    apiBase.value = url;
+    localStorage.setItem('apiBase', url);
+}
 
 export function apiFetch(path: string, options?: RequestInit): Promise<Response> {
-    console.log('API_BASE:', API_BASE);
+    console.log('apiBase:', apiBase.value);
     try {
-        const fetcher = fetch(`${API_BASE}${path}`, { 
+        const fetcher = fetch(`${apiBase.value}${path}`, { 
             credentials: 'include', 
             ...options
         });

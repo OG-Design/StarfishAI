@@ -373,9 +373,10 @@ $border-radius: 1rem;
   padding: var(--space);
   box-sizing: border-box;
 
+
   input {
     height: 100%;
-    min-width: 200px;
+    min-width: 0;
 
     font-size: 24px;
 
@@ -407,7 +408,7 @@ $border-radius: 1rem;
   flex-direction: column;
 
   margin: 0;
-
+  padding: 0;
   grid-area: thread;
 
   background-color: #12141A;
@@ -462,7 +463,7 @@ $border-radius: 1rem;
   box-shadow: $shadow;
 
   textarea {
-
+    min-width: 0;
     width: 80%;
     height: calc(100% - var(--space) * 2);
 
@@ -543,7 +544,7 @@ $border-radius: 1rem;
 
 }
 .message {
-  min-width: none;
+  min-width: 0;
   max-width: 70%;
   list-style-type: none;
   offset: 0;
@@ -568,7 +569,7 @@ $border-radius: 1rem;
 
 .message-user {
 
-  min-width: none;
+  min-width: 0;
   max-width: 70%;
   align-self: flex-end;
   justify-items: end;
@@ -585,7 +586,8 @@ $border-radius: 1rem;
 
   select {
     height: 100%;
-    min-width: 200px;
+    min-width: 0;
+    width: min(200px, 100%);
 
     font-size: 24px;
 
@@ -620,7 +622,7 @@ $border-radius: 1rem;
   position: absolute;
 
   bottom: 10rem;
-  left: 20rem;
+  left: min(20rem, calc(50% - 75px));
 }
 
 .loading-gif {
@@ -786,7 +788,8 @@ $border-radius: 1rem;
 @media screen and (max-width:500px) {
 
   #thread-main {
-    min-width: 100vw;
+    min-width: 0;
+    width: 100%;
   }
 
   #top-menu {
@@ -794,7 +797,7 @@ $border-radius: 1rem;
     overflow: hidden;
     input {
       max-width: calc(40vw - var(--space) * 4);
-      min-width: none;
+      min-width: 0;
     }
   }
 

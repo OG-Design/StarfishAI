@@ -12,6 +12,7 @@ $bg-ac-1: #1E2230;
 $bg-alpha-1: hsla(237, 100%, 70%, .05);
 
 $key-1: #8B5CF6;
+$key-1-bright: hsl(258, 90%, 76%);
 $key-1-alpha: hsl(258, 90%, 66%, .5);
 $key-2: #646cff;
 $key-2: #646cff88;
@@ -19,6 +20,13 @@ $key-2: #646cff88;
 $text-1: rgba(255, 255, 255, 0.87);
 $text-2: #fff;
 
+$font-size-1: 36px;
+$font-size-2: 28px;
+$font-size-3: 24px;
+$font-size-4: 16px;
+$font-size-5: 12px;
+
+$top-menu-height: 75px;
 :root {
     --space: #{$space};
     --space-1: #{$space-1};
@@ -33,11 +41,19 @@ $text-2: #fff;
     --bg-alpha-1: #{$bg-alpha-1};
 
     --key-1: #{$key-1};
+    --key-1-bright: #{$key-1-bright};
     --key-1-alpha: #{$key-1-alpha};
     --key-2: #{$key-2};
 
     --text-1: #{$text-1};
     --text-2: #{$text-2};
+
+    --font-size-1: #{$font-size-1};
+    --font-size-2: #{$font-size-2};
+    --font-size-3: #{$font-size-3};
+    --font-size-4: #{$font-size-4};
+    --font-size-5: #{$font-size-5};
+    --top-menu-height: #{$top-menu-height};
 }
 
 @media screen and (max-width: 500px) {
