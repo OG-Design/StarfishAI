@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Req, Res, Session } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, Res } from '@nestjs/common';
 
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
@@ -88,8 +88,4 @@ export class AuthController {
         });
     }
 
-    @Get("check")
-    isAuth(@Session() session: Record<string, any>): object {
-        return this.authService.isAuth(session);
-    }
 }

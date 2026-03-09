@@ -3,7 +3,8 @@ import { ref } from 'vue';
 // Vite env vars only work during build, not at runtime in Electron bundles
 // Detect Electron (file:// protocol) and always use localhost for development
 const isElectron = typeof window !== "undefined" && window.location.protocol === "file:";
-const defaultBase = isElectron ? "http://localhost:3000" : (import.meta.env.VITE_API_URL || "http://localhost:3000");
+// In Electron, we need the full URL. In the browser, use "" so requests go through the Vite proxy (or same-origin in production).
+const defaultBase = isElectron ? "http://localhost:3000" : (import.meta.env.VITE_API_URL || "");
 
 export const apiBase = ref<string>(localStorage.getItem('apiBase') || defaultBase);
 
