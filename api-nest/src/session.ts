@@ -7,7 +7,7 @@ export const sessionMiddleware = session({
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        secure: false,
+        secure: 'auto',  // auto: true if req comes over HTTPS
         maxAge: 3600000 * 24,
         sameSite: 'lax',
         path: '/',

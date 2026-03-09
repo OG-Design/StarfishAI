@@ -7,6 +7,20 @@ import * as jwt from 'jsonwebtoken';
 
 import { secretJWT } from 'src/secretJWT';
 
+function cookieOptions(req: Request, maxAge: number) {
+    const origin = req.headers.origin || '';
+    const host = req.headers.host || '';
+    // Cross-origin if Origin is present and doesn't match the backend host
+    const isCrossOrigin = !!origin && !origin.includes(host);
+    return {
+        httpOnly: true,
+        sameSite: isCrossOrigin ? 'none' as const : 'lax' as const,
+        secure: isCrossOrigin, // SameSite=None requires Secure (HTTPS)
+        path: '/',
+        maxAge,
+    };
+}
+
 @Controller('auth')
 export class AuthController {
     constructor(private authService: AuthService) {}
@@ -37,13 +51,7 @@ export class AuthController {
         );
 
         // set cookie http only
-        res.cookie('jwt', token, {
-            httpOnly: true,
-            sameSite: 'lax',
-            secure: false,
-            path:'/',
-            maxAge: 10 * 60 * 1000
-        });
+        res.cookie('jwt', token, cookieOptions(req, 10 * 60 * 1000));
 
         console.log("Token generated:\n", token);
         return res.json({ message: "Logged in successfully" });
@@ -60,13 +68,7 @@ export class AuthController {
         if(!user) return res.json({ isAuth: false});
 
         const token = jwt.sign({ idUser: user.idUser, username: user.username}, secretJWT, {expiresIn: '1h'});
-        res.cookie('jwt', token, {
-            httpOnly: true,
-            sameSite: 'lax',
-            secure: false,
-            path: '/',
-            maxAge: 60 * 60 * 1000
-        });
+        res.cookie('jwt', token, cookieOptions(req, 60 * 60 * 1000));
 
         return res.json({ isAuth: true});
     }

@@ -22,10 +22,11 @@ async function bootstrap() {
   console.log("API_PORT", configService.get('API_PORT'));
 
   const allowedOrigins = (configService.get<string>('ALLOWED_ORIGINS') ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  const allowAll = allowedOrigins.includes('*');
 
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || origin === 'file://' || allowedOrigins.includes(origin)) {
+      if (!origin || origin === 'file://' || allowAll || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error(`CORS: origin ${origin} not allowed`));
