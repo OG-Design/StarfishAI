@@ -8,14 +8,17 @@ import * as jwt from 'jsonwebtoken';
 import { secretJWT } from 'src/secretJWT';
 
 function cookieOptions(req: Request, maxAge: number) {
+    const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     const origin = req.headers.origin || '';
     const host = req.headers.host || '';
     // Cross-origin if Origin is present and doesn't match the backend host
     const isCrossOrigin = !!origin && !origin.includes(host);
+    // SameSite=None requires Secure, which requires HTTPS
+    const useNone = isCrossOrigin && isSecure;
     return {
         httpOnly: true,
-        sameSite: isCrossOrigin ? 'none' as const : 'lax' as const,
-        secure: isCrossOrigin, // SameSite=None requires Secure (HTTPS)
+        sameSite: useNone ? 'none' as const : 'lax' as const,
+        secure: isSecure,
         path: '/',
         maxAge,
     };

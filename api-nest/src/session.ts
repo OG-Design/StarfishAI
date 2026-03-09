@@ -15,3 +15,22 @@ export const sessionMiddleware = session({
     // add a simple callback for debugging session creation
     store: undefined // default memory store for development
 });
+
+/**
+ * Middleware that adjusts session cookie for cross-origin HTTPS requests.
+ * SameSite=None (required for cross-origin cookies) only works with Secure (HTTPS).
+ * Over plain HTTP, cross-origin cookies cannot work in modern browsers;
+ * use a same-origin proxy (e.g. Vite proxy) instead.
+ */
+export function adaptSessionCookie(req: any, _res: any, next: any) {
+    const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
+    const origin = req.headers.origin || '';
+    const host = req.headers.host || '';
+    const isCrossOrigin = !!origin && !origin.includes(host);
+
+    if (isCrossOrigin && isSecure && req.session?.cookie) {
+        req.session.cookie.sameSite = 'none';
+        req.session.cookie.secure = true;
+    }
+    next();
+}

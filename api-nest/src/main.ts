@@ -4,7 +4,7 @@ const isDev = process.env.NODE_ENV !== 'production'; // set but npm start / star
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
-import {sessionMiddleware} from './session';
+import {sessionMiddleware, adaptSessionCookie} from './session';
 import { SessionIoAdapter } from './socket-io.adapter';
 import { type } from 'os';
 
@@ -36,6 +36,7 @@ async function bootstrap() {
   });
 
   app.use(sessionMiddleware);
+  app.use(adaptSessionCookie);
 
   // Check electron mode
   app.use((req: any, res: any, next: any) => {
