@@ -8,22 +8,15 @@ import TopMenu from './components/TopMenu.vue';
 import Profile from './components/Profile.vue';
 
 import { apiFetch } from './composables/useApi';
+import { connectSocket } from './composables/useSocket';
 
-import {onMounted, ref} from 'vue'
+import { ref } from 'vue'
 
 // imports selectedThread type
 import type {selectedThread} from './types/selectedThread'
 
 // imports threadsAvailable from a globally available type between api and webapp
 import type thread from '../../types/thread';
-
-// make authenticated state ref
-const authenticated = ref(false);
-
-// Make threads storage
-const threadsAvailable = ref<thread[]>([]);
-
-// console.log(threadsAvailable.value);
 
 const isElectron = typeof window !== "undefined" && window.location.protocol === "file:";
 const isFirstRun = isElectron && !localStorage.getItem("isFirstRun");
@@ -32,6 +25,14 @@ if (isFirstRun) {
   localStorage.clear();
   localStorage.setItem("isFirstRun", "false");
 }
+
+// make authenticated state ref
+const authenticated = ref(isElectron);
+
+// Make threads storage
+const threadsAvailable = ref<thread[]>([]);
+
+// console.log(threadsAvailable.value);
 
 // creates reference selectedThread
 const selectedThread = ref({title:"",idThread:0});
@@ -67,8 +68,14 @@ async function checkSession() {
 
   const loggedIn = await res.json();
 
-  // change the authenticated value to true or false based on result
-  authenticated.value = !!(loggedIn && loggedIn.isAuth);
+  // In Electron mode, the backend auto-authenticates every request,
+  // so keep authenticated=true even if the cookie-based check fails.
+  if (isElectron) {
+    authenticated.value = true;
+  } else {
+    // change the authenticated value to true or false based on result
+    authenticated.value = !!(loggedIn && loggedIn.isAuth);
+  }
 
   // get threads if authenticated
   if (authenticated.value) {
@@ -87,6 +94,11 @@ async function checkSession() {
 
 // run session check on app start
 checkSession();
+
+// In Electron mode, Login never mounts, so connect the socket here
+if (isElectron) {
+  connectSocket();
+}
 
 // Open thread by updating selectedThreads value
 function handleOpenThread_inParent(payload: thread) {

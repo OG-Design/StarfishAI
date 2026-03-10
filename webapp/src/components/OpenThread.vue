@@ -580,7 +580,7 @@ $border-radius: 1rem;
 
 #model-selector {
   position: absolute;
-  width: 100px;
+  width: 150px;
   bottom: 20%;
   padding-left: calc(var(--space) * 2);
 

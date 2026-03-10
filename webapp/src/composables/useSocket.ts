@@ -7,7 +7,12 @@ export const aiChunks = ref<string[]>([]);
 
 export let socket: Socket | null =null;
 
+const isElectron = typeof window !== "undefined" && window.location.protocol === "file:";
+
 async function checkSession(): Promise<boolean> {
+    // In Electron mode, the backend auto-authenticates every request
+    if (isElectron) return true;
+
     console.log("Checking JWT");
 
     const res = await apiFetch('/api/auth/check', {credentials: 'include'});

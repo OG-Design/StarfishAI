@@ -5,7 +5,7 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc && electron-builder",
-    "electron-rebuild":"electron-rebuild -f -w better-sqlite3",
+    "electron-rebuild": "electron-rebuild -f -w better-sqlite3",
     "serve": "electron ."
   },
   "keywords": [],
@@ -13,13 +13,14 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@types/node": "^25.3.5",
     "electron": "^40.6.0",
     "electron-builder": "^26.8.1",
     "typescript": "^5.9.3"
   },
   "build": {
     "appId": "com.olsen-graphics.starfish",
-    "productName":"Starfish AI",
+    "productName": "Starfish AI",
     "files": [
       "dist/**/*"
     ],
@@ -53,12 +54,12 @@
         "to": ".env.secret"
       },
       {
-        "from":"../ollama/docker-compose.yml",
-        "to":"ollama/docker-compose.yml"
+        "from": "../ollama/docker-compose.yml",
+        "to": "ollama/docker-compose.yml"
       },
       {
-        "from":"../redis/docker-compose.yml",
-        "to":"redis/docker-compose.yml"
+        "from": "../redis/docker-compose.yml",
+        "to": "redis/docker-compose.yml"
       }
     ],
     "directories": {
