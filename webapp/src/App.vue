@@ -81,10 +81,10 @@ async function checkSession() {
   if (authenticated.value) {
     getAllThreads();
 
-    // check if models or groups stored locally
-    if(!storedModels || !storedSelectedGroup) {
-      fetchModelsByGroup();
-    }
+    // Always fetch fresh groups and models on every authenticated load.
+    // fetchUserGroup must complete first so selectedGroup is ready.
+    await fetchUserGroup();
+    await fetchModelsByGroup();
 
     return;
   }
@@ -185,7 +185,6 @@ async function fetchUserGroup() {
     // check if stored locally
     if (!storedSelectedGroup) {
       selectedGroup.value = await groupsRes[0];
-      fetchModelsByGroup();
     }
 
     console.log("Selected group:", groupsRes[0]);
@@ -193,8 +192,6 @@ async function fetchUserGroup() {
     console.log("UserGroups: \n", await groups.value);
 
 }
-
-fetchUserGroup();
 
 async function fetchModelsByGroup() {
 

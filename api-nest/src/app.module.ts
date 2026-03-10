@@ -13,6 +13,8 @@ import { ChateventGateway } from './chatevent/chatevent.gateway';
 import { ConfigModule } from '@nestjs/config';
 import { SystemService } from './system/system.service';
 import { SystemController } from './system/system.controller';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -28,7 +30,13 @@ import { SystemController } from './system/system.controller';
       ],
       isGlobal: true,          // Make ConfigService accessible everywhere
       ignoreEnvFile: false, // keeps .env from loading defaults
-    })
+    }),
+    // Serve the built Vue app so frontend + API share one origin.
+    // Requests to /api/* and /socket.io/* are handled by NestJS first.
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', '..', 'webapp', 'dist'),
+      exclude: ['/api/(.*)', '/socket.io/(.*)'],
+    }),
   ],
   controllers: [AppController, UserController, AuthController, AiController, SystemController],
   providers: [AppService, UserService, AuthService, AiService, ChateventGateway, SystemService],

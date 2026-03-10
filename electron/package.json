@@ -1,6 +1,6 @@
 {
   "name": "electron",
-  "version": "0.0.1-alpha",
+  "version": "0.0.1-alpha.1",
   "description": "Starfish AI Desktop Application",
   "main": "dist/main.js",
   "scripts": {
@@ -20,7 +20,7 @@
   },
   "build": {
     "appId": "com.olsen-graphics.starfish",
-    "productName": "Starfish AI",
+    "productName": "Starfish AI - Jelly",
     "files": [
       "dist/**/*"
     ],

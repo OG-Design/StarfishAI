@@ -18,6 +18,28 @@ export function resetApiBase() {
     apiBase.value = defaultBase;
 }
 
+// When the remote app loads via a ?returnTo= param, capture it into localStorage
+// so the Reset button can navigate back to the originating host.
+(function captureReturnTo() {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const returnTo = params.get('returnTo');
+    if (returnTo) {
+        localStorage.setItem('homeUrl', returnTo);
+        // Strip the param from the URL without reloading
+        params.delete('returnTo');
+        const clean = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.history.replaceState({}, '', clean);
+    }
+})();
+
+/** Navigate back to wherever we came from (set via ?returnTo on arrival). */
+export function navigateHome() {
+    const home = localStorage.getItem('homeUrl') || 'http://localhost:3000';
+    localStorage.removeItem('homeUrl');
+    window.location.href = home;
+}
+
 export function apiFetch(path: string, options?: RequestInit): Promise<Response> {
     console.log('apiBase:', apiBase.value);
     try {

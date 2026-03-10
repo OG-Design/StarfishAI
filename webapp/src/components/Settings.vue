@@ -1,7 +1,7 @@
 <script setup>
 import { nextTick, onMounted, ref } from 'vue';
 
-import { apiFetch, apiBase } from '../composables/useApi';
+import { apiFetch, apiBase, resetApiBase, navigateHome } from '../composables/useApi';
 import { nvidiaConfig, cpuConfig } from '../composables/useAiConfig';
 
 
@@ -9,6 +9,19 @@ const emit = defineEmits(["openSettings", "updateModels"]);
 
 function handleSettingsMenu() {
     emit("openSettings");
+}
+
+function handleSaveApi() {
+    const url = apiBase.value.trim();
+    if (!url) return;
+    const dest = new URL(url);
+    dest.searchParams.set('returnTo', window.location.href);
+    window.location.href = dest.toString();
+}
+
+function handleResetApi() {
+    resetApiBase();
+    navigateHome();
 }
 
 function handleGroupChange() {
@@ -234,6 +247,15 @@ onMounted(async () => {
             <li id="settings-header">
                 <h1>Settings</h1>
                 <button id="close-btn" @click="handleSettingsMenu">x</button>
+            </li>
+            <li class="flex-column">
+                <h2>Remote Connection</h2>
+                <div class="flex-row" style="gap: var(--space); align-items: center;">
+                    <label for="settings-url">Starfish API Address</label>
+                    <input id="settings-url" type="text" placeholder="http://192.168.1.x:3000" v-model="apiBase">
+                    <button @click="handleSaveApi">Connect</button>
+                    <button @click="handleResetApi">Reset</button>
+                </div>
             </li>
             <li class="flex-column">
                 <h2>Models</h2>

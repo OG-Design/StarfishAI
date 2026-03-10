@@ -1,6 +1,6 @@
 {
   "name": "api-nest",
-  "version": "0.0.1",
+  "version": "0.0.1-alpha.1",
   "description": "",
   "author": "",
   "private": true,
@@ -25,6 +25,7 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-socket.io": "^11.1.12",
+    "@nestjs/serve-static": "^5.0.4",
     "@nestjs/websockets": "^11.1.12",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.6.0",

@@ -182,6 +182,7 @@ function waitForServer(port: string, timeout = 15000): Promise<void> {
 
 function createWindow() {
     const win = new BrowserWindow({
+        title: 'Starfish AI - Jelly',
         width: 1280,
         height: 800,
         webPreferences: {
