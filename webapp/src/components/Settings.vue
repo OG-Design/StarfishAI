@@ -169,58 +169,56 @@ async function addModelToGroup() {
     }
 }
 
-const ollamaConfig = ref<Object>({
 
-})
+const ollamaConfigs = ref([]);
+const selectedConfig = ref("");
 
 async function getOllamaConfig() {
     console.log("running getOllamaConfig()");
-    const res = await apiFetch('/api/system/compose/ollama',{
+    const res = await apiFetch('/api/system/compose/ollama/get',{
         method: 'GET',
         headers: {
             "Content-Type":"application/json"
         }
     });
 
-
     const data = await res.json();
-
+    ollamaConfigs.value = data;
     console.log("Response getOllamaConfig():", data);
 
+    // Set selectedConfig after configs are loaded
+    const savedConfig = localStorage.getItem("ollamaConfig");
+    if (savedConfig && ollamaConfigs.value.includes(savedConfig)) {
+        selectedConfig.value = savedConfig;
+    } else {
+        selectedConfig.value = "";
+    }
 }
-
-
 
 getOllamaConfig();
 
-const aiProccessorRef = ref();
+async function handleSelectedConfig() {
+    if (selectedConfig.value) {
+        localStorage.setItem("ollamaConfig", selectedConfig.value);
+    } else {
+        localStorage.removeItem("ollamaConfig");
+    }
 
-async function handleAiProccessorChange() {
-    console.log("running handleAiProccessorChange()");
-    
-
-
-    const val = aiProccessorRef.value;
-    const body = {
-        val
-    };
-
-    console.log("aiProccessorRef.value:", val);
-
-    const res = await apiFetch('/api/system/compose/ollama',{
-        method: 'POST',
-        headers: {
-            "Content-Type":"application/json"
-        },
-        body
+    const body = JSON.stringify({
+        preset: selectedConfig.value
     });
 
+    const res = await apiFetch("/api/system/compose/ollama/change", {
+        method: 'POST',
+        headers:{
+            'Content-Type':'application/json'
+        },
+        body
+    })
 
-    const data = await res.json();
+    console.log("Response handleSelectConfig", await res.json());
 
-    console.log("Response handleAiProccessorChange():", data);
 }
-
 
 function toggleEditMode() {
     editMode_models.value = !editMode_models.value;
@@ -300,21 +298,15 @@ onMounted(async () => {
                     </select>
                 </div>
             </li>
-            <li  
+            <li
             class="flex-column">
                 <h2>System</h2>
 
                 <div class="tile-column">
                     <h3>AI Proccessor</h3>
-                    <select v-model="aiProccessorRef">
-                        <option :value="nvidiaConfig">
-                            Nvidia GPU
-                        </option>
-                        <option :value="cpuConfig">
-                            CPU
-                        </option>
+                    <select @change="handleSelectedConfig" :value="selectedConfig" v-model="selectedConfig">
+                        <option v-for="config in ollamaConfigs" :value="config">{{ config }}</option>
                     </select>
-                    <button @click="handleAiProccessorChange">Apply</button>
                 </div>
             </li>
         </ul>

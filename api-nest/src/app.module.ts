@@ -35,7 +35,7 @@ import { join } from 'path';
     // Requests to /api/* and /socket.io/* are handled by NestJS first.
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'webapp', 'dist'),
-      exclude: ['/api/(.*)', '/socket.io/(.*)'],
+      exclude: ['/api/(*)', '/socket.io/(*)'],
     }),
   ],
   controllers: [AppController, UserController, AuthController, AiController, SystemController],

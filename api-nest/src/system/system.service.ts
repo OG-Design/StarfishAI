@@ -41,12 +41,24 @@ export class SystemService {
 
     }
 
-    postComposeConfig() {
+    changeComposeConfig(preset: string) {
         try {
-            
+            const presets = this.presets;
+            const selectedPreset = presets.find(conf => conf.name === preset);
+            const configData = selectedPreset.configFile;
+            console.log("Updating ollama config to:", preset + ".\nConfig find result:", selectedPreset);
+
+            fs.writeFileSync(this.ollamaPath, yaml.dump(configData));
+
+            return {message: 'success'};
+
         } catch (error) {
             console.error("error committing ollama config:", error);
             return new InternalServerErrorException("Internal server error");
         }
+    }
+
+    restartOllama() {
+
     }
 }
