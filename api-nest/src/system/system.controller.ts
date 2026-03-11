@@ -6,7 +6,7 @@ export class SystemController {
 
     constructor(private readonly systemService: SystemService) {}
 
-    @Get('compose/ollama') 
+    @Get('compose/ollama')
     getComposeConfig() {
         return this.systemService.getComposeConfig();
     }

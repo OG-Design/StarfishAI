@@ -5,7 +5,81 @@
     },
     "api":{
         "address": "http://localhost",
-        "port": 3000
+        "port": 3000,
+        "systemSettings": {
+            "compose-ollama": {
+                "presets": [
+                    {
+                        "name":"Nvidia",
+                        "configFile": {
+                            "version": "3.8",
+                            "services": {
+                                "ollama": {
+                                "image": "ollama/ollama:latest",
+                                "container_name": "ollama",
+                                "ports": [
+                                    "11434:11434"
+                                ],
+                                "volumes": [
+                                    "ollama_data:/root/.ollama"
+                                ],
+                                "restart": "unless-stopped",
+                                "deploy": {
+                                    "resources": {
+                                    "reservations": {
+                                        "devices": [
+                                        {
+                                            "driver": "nvidia",
+                                            "count": "all",
+                                            "capabilities": [
+                                            "gpu"
+                                            ]
+                                        }
+                                        ]
+                                    }
+                                    }
+                                },
+                                "environment": {
+                                    "OLLAMA_NUM_PARALLEL": "4",
+                                    "OLLAMA_MAX_LOADED_MODELS": "2"
+                                }
+                                }
+                            },
+                            "volumes": {
+                                "ollama_data": null
+                            }
+                        }
+                    },
+                    {
+                        "name":"CPU",
+                        "configFile": {
+                            "version": "3.8",
+                            "services": {
+                                "ollama": {
+                                "image": "ollama/ollama:latest",
+                                "container_name": "ollama",
+                                "ports": [
+                                    "11434:11434"
+                                ],
+                                "volumes": [
+                                    "ollama_data:/root/.ollama"
+                                ],
+                                "restart": "unless-stopped",
+                                "environment": {
+                                    "OLLAMA_NUM_PARALLEL": "4",
+                                    "OLLAMA_MAX_LOADED_MODELS": "2"
+                                }
+                                }
+                            },
+                            "volumes": {
+                                "ollama_data": null
+                            }
+                        }
+                    }
+
+                ]
+            }
+        }
     },
     "user": {
         "register":{
