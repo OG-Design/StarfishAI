@@ -40,7 +40,7 @@ async function bootstrap() {
 
   // Check electron mode
   app.use((req: any, res: any, next: any) => {
-    if (process.env.ELECTRON_MODE === 'true' && !req.session.user) {
+    if (process.env.ELECTRON_MODE === 'true') {
       req.session.user = { idUser: 1, username: 'electron', hash: '' };
     }
     next();
