@@ -1,6 +1,6 @@
 <script setup lang="ts">
-
-import ThreadsMenu from './components/ThreadsMenu.vue'
+import pkg from '../../electron/package.json';
+import ThreadsMenu from './components/ThreadsMenu.vue';
 import OpenThread from './components/OpenThread.vue';
 import Login from './components/Login.vue';
 import Settings from './components/Settings.vue';
@@ -236,7 +236,9 @@ function handleLogout() {
 }
 
 let devMode = false;
-let alphaMode = true;
+let alphaMode = false;
+
+const version = ref(pkg.build.productName+" "+pkg.version);
 
 </script>
 
@@ -290,6 +292,8 @@ let alphaMode = true;
 
   <ElectronMessage v-if="isElectron"/>
 
+  <span id="app-version">{{version}}</span>
+
   <!-- Handles login -->
   <Login v-if="!authenticated" :authenticated="authenticated" @updateThreadsAvailable="handleUpdateThreadsAvailable"/>
 
@@ -315,6 +319,19 @@ let alphaMode = true;
 </template>
 
 <style lang="scss" scoped>
+#app-version {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: var(--space);
+  background-color: transparent;
+  color: hsla(0, 0%, 100%, .4);
+  font-weight: 100;
+  font-size: 16px;
+  pointer-events: none;
+  z-index: +1000;
+}
+
 #toggle-menu-button {
   width: 50px;
   height: 50px;
