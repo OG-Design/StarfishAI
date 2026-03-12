@@ -49,6 +49,10 @@ const responseAddModel = ref("");
 const editMode_models = ref(false);
 const selectedModels = ref([]);
 const selectedGroupId = ref(null);
+const downloadPercentage = ref("");
+const ollamaConfigs = ref([]);
+const selectedConfig = ref("");
+const systemServices = ref([]);
 
 import { watch } from 'vue';
 watch(selectedGroup, (newVal) => {
@@ -105,7 +109,7 @@ async function fetchModelsByGroup() {
     emit("updateModels", models.value); // emit to parent to pass from parent to OpenThread, this allows the list of models to be displayed
 }
 
-const downloadPercentage = ref("");
+
 
 async function addModelToGroup() {
     console.log("running addModelToGroup()");
@@ -170,8 +174,6 @@ async function addModelToGroup() {
 }
 
 
-const ollamaConfigs = ref([]);
-const selectedConfig = ref("");
 
 async function getOllamaConfig() {
     console.log("running getOllamaConfig()");
@@ -214,10 +216,16 @@ async function handleSelectedConfig() {
             'Content-Type':'application/json'
         },
         body
-    })
+    });
 
     console.log("Response handleSelectConfig", await res.json());
 
+}
+
+async function handleLoadOllamaConfig() {
+    const res = await apiFetch("/api/system/compose/ollama/restart");
+    const data = await res.json();
+    console.log("handleLoadOllamaConfig() response:", data);
 }
 
 function toggleEditMode() {
@@ -228,9 +236,26 @@ function deleteSelectedModels() {
     console.log("Deleting models: \n", selectedModels.value);
 }
 
+async function checkSystemServices() {
+    isLoading.value=true
+    const res = await apiFetch('/api/system/health', {
+        method: 'GET',
+        headers: {
+            'Content-Type':'application/json'
+        }
+    })
+
+    const data = await res.json();
+
+    console.log("checkSystemServices():", data);
+
+    systemServices.value=data;
+    isLoading.value=false
+}
 
 onMounted(async () => {
     nextTick();
+    await checkSystemServices();
     await fetchUserGroup();
     await fetchModelsByGroup();
 
@@ -303,10 +328,37 @@ onMounted(async () => {
                 <h2>System</h2>
 
                 <div class="tile-column">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Service</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="service in systemServices">
+                                <th>{{ service.name }}</th>
+                                <th>{{ service.status }}</th>
+                                <th>
+                                    <div v-if="isLoading" class="loading-gif-container-settings"><img class="loading-gif-settings" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
+                                    <div v-else class="loading-gif-container-settings"></div>
+                                </th>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <button @click="checkSystemServices">Refresh</button>
+                </div>
+
+                <div class="tile-column">
                     <h3>AI Proccessor</h3>
                     <select @change="handleSelectedConfig" :value="selectedConfig" v-model="selectedConfig">
                         <option v-for="config in ollamaConfigs" :value="config">{{ config }}</option>
                     </select>
+                    <button @click="handleLoadOllamaConfig">Load Config</button>
+                    <div v-if="isLoading" class="loading-gif-container-settings"><img class="loading-gif-settings" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
+                    <div v-else class="loading-gif-container-settings"></div>
                 </div>
             </li>
         </ul>

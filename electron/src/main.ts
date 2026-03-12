@@ -52,7 +52,8 @@ function startDockerCompose() {
             exec(`docker-compose -f "${ollamaCompose}" up -d`, (err, stdout, stderr) => {
                 if (err) {
                     console.error('Ollama docker-compose error:', err);
-                    reject(err);
+                    resolve();
+                    // reject(err);
                 } else {
                     console.log('Ollama started:', stdout);
                     resolve();
@@ -63,7 +64,8 @@ function startDockerCompose() {
             exec(`docker-compose -f "${redisCompose}" up -d`, (err, stdout, stderr) => {
                 if (err) {
                     console.error('Redis docker-compose error:', err);
-                    reject(err);
+                    resolve()
+                    // reject(err);
                 } else {
                     console.log('Redis started:', stdout);
                     resolve();
@@ -113,7 +115,7 @@ function startNest() {
 
     nestServer = spawn(nodePath, [nestPath], {
         cwd: nestCwd,
-        env: { ...process.env, ...dotenvVars, ELECTRON_RUN_AS_NODE: '1' }
+        env: { ...process.env, ...dotenvVars, ELECTRON_RUN_AS_NODE: '1', ELECTRON_MODE: 'true' }
     });
 
     // Write server logs to a file for debugging packaged builds
@@ -143,13 +145,13 @@ function waitForDocker() {
     // Poll 'docker info' until Docker is running or timeout (max ~15s)
     const timeout = 15000;
     const start = Date.now();
-    return new Promise<void>((resolve, reject) => {
+    return new Promise((resolve) => {
         function check() {
             exec('docker info', (err, stdout, stderr) => {
                 if (!err) {
-                    resolve();
+                    resolve(true);
                 } else if (Date.now() - start > timeout) {
-                    reject(new Error('Docker is not running or not installed'));
+                    resolve(false);
                 } else {
                     setTimeout(check, 300);
                 }
@@ -180,8 +182,9 @@ function waitForServer(port: string, timeout = 15000): Promise<void> {
     });
 }
 
+let win: BrowserWindow;
 function createWindow() {
-    const win = new BrowserWindow({
+    win = new BrowserWindow({
         title: 'Starfish AI - Jelly',
         width: 1280,
         height: 800,
@@ -201,21 +204,53 @@ function createWindow() {
     }
 }
 
+function sendDataToRenderer(data: any) {
+    win.webContents.send("electron-data", data);
+}
+
+async function ollamaIsUpRes() {
+    // Use OLLAMA_PORT from dotenvVars or process.env
+    const ollamaPort = dotenvVars.OLLAMA_PORT || process.env.OLLAMA_PORT || '11434';
+    const PORTS = [ollamaPort];
+    const command = 'docker ps --format "{{.Names}} {{.Ports}} {{.Status}}"';
+    const checks = PORTS.map(port => new Promise(resolve => {
+        exec(command, (error, stdout) => {
+            if (error) return resolve([]);
+            const lines = stdout.split('\n').filter(Boolean);
+            const result = lines
+                .filter(line => line.includes(`:${port}->`))
+                .map(line => {
+                    const [name, ...rest] = line.split(' ');
+                    const portEndIdx = rest.findIndex(r => r.endsWith('/tcp') || r.endsWith('/udp'));
+                    const ports = rest.slice(0, portEndIdx + 1).join(' ').split(',').map(p => p.trim()).filter(Boolean);
+                    const status = rest.slice(portEndIdx + 1).join(' ').trim();
+                    return { name, ports, status };
+                });
+            resolve(result);
+        });
+    }));
+    const containers = await Promise.all(checks);
+    const flat = containers.flat().filter(Boolean);
+
+    sendDataToRenderer(flat);
+}
+
 app.whenReady().then(async () => {
     try {
-        await waitForDocker();
-        console.log('[Electron] Docker is running');
         await startDockerCompose();
-        console.log('[Electron] Waiting for Ollama and Redis to be ready...');
-        await Promise.all([
-            waitForTcpPort(11434, 20000), // Ollama default port
-            waitForTcpPort(6379, 20000)   // Redis default port
-        ]);
+        // console.log('[Electron] Waiting for Ollama and Redis to be ready...');
+        // await Promise.all([
+        //     waitForTcpPort(11434, 20000), // Ollama default port
+        //     waitForTcpPort(6379, 20000)   // Redis default port
+        // ]);
         console.log('[Electron] Ollama and Redis are ready');
         startNest();
         await waitForServer(API_PORT);
         console.log('[Electron] NestJS server is ready');
         createWindow();
+
+        ollamaIsUpRes();
+        setInterval(() => ollamaIsUpRes(), 10000);
     } catch (err) {
         console.error('[Electron] Startup error:', err);
         // Show error window if Docker is not running or services failed
@@ -235,8 +270,6 @@ app.whenReady().then(async () => {
                 <body style="font-family:sans-serif;background:#fff;color:#222;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
                     <div>
                         <h2>Startup Error</h2>
-                        <p>Docker, Ollama, or Redis is not running or failed to start.<br>
-                        Please ensure Docker Desktop is running and try again.</p>
                         <pre style="color:#c00;font-size:12px;">${err}</pre>
                     </div>
                 </body>
@@ -244,6 +277,7 @@ app.whenReady().then(async () => {
         );
     }
 });
+
 
 app.on('window-all-closed', () => {
     if (nestServer) {

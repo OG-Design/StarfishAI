@@ -6,7 +6,7 @@ import Login from './components/Login.vue';
 import Settings from './components/Settings.vue';
 import TopMenu from './components/TopMenu.vue';
 import Profile from './components/Profile.vue';
-
+import ElectronMessage from './components/ElectronMessage.vue';
 import { apiFetch } from './composables/useApi';
 import { connectSocket } from './composables/useSocket';
 
@@ -287,6 +287,8 @@ let alphaMode = true;
   </div>
 
   <button id="toggle-menu-button" v-on:click="toggleMenu" :class="rotateMenuButton ? 'rotate-menu-button' : ''">→</button>
+
+  <ElectronMessage v-if="isElectron"/>
 
   <!-- Handles login -->
   <Login v-if="!authenticated" :authenticated="authenticated" @updateThreadsAvailable="handleUpdateThreadsAvailable"/>
