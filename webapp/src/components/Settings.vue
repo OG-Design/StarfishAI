@@ -1,9 +1,10 @@
 <script setup>
-import { nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 
 import { apiFetch, apiBase, resetApiBase, navigateHome } from '../composables/useApi';
 import { nvidiaConfig, cpuConfig } from '../composables/useAiConfig';
 
+import CustomSelect from './CustomSelect.vue';
 
 const emit = defineEmits(["openSettings", "updateModels"]);
 
@@ -24,15 +25,17 @@ function handleResetApi() {
     navigateHome();
 }
 
-function handleGroupChange() {
-    const group = groups.value.find(g => g.userGroup_idUserGroup === selectedGroupId.value);
+function handleGroupChange(selected) {
+    // selected is the object from CustomSelect: { key, value }
+    const group = groups.value.find(g => g.userGroup_idUserGroup === selected.value);
     if (group) {
         selectedGroup.value = group;
+        selectedGroupId.value = group.userGroup_idUserGroup;
         emit('updateSelectedGroup', group);
         console.log("Changed selected group:", group);
         fetchModelsByGroup();
     } else {
-        console.warn("No group found for id:", selectedGroupId.value);
+        console.warn("No group found for id:", selected.value);
     }
 }
 
@@ -42,7 +45,17 @@ const isLoading = ref(false);
 
 const models = ref([]);
 const groups = ref([]);
+const groupsReType = computed(() =>
+    groups.value.map(group => ({
+        key: group.name,
+        value: group.userGroup_idUserGroup
+    }))
+);
 const selectedGroup = ref({});
+const selectedGroupReType = computed(() => ({
+    key: selectedGroup.value?.name ?? '',
+    value: selectedGroup.value?.userGroup_idUserGroup ?? ''
+}))
 const addName = ref("");
 const addFullName = ref("");
 const responseAddModel = ref("");
@@ -51,7 +64,18 @@ const selectedModels = ref([]);
 const selectedGroupId = ref(null);
 const downloadPercentage = ref("");
 const ollamaConfigs = ref([]);
+const ollamaConfigsReType = computed(() =>
+    ollamaConfigs.value.map(config => ({
+        key: config,
+        value: config
+    }))
+);
+
 const selectedConfig = ref("");
+const selectedConfigReType = computed(() => ({
+    key: selectedConfig.value ?? '',
+    value: selectedConfig.value ?? ''
+}))
 const systemServices = ref([]);
 
 import { watch } from 'vue';
@@ -199,10 +223,13 @@ async function getOllamaConfig() {
 
 getOllamaConfig();
 
-async function handleSelectedConfig() {
-    if (selectedConfig.value) {
-        localStorage.setItem("ollamaConfig", selectedConfig.value);
+async function handleSelectedConfig(selected) {
+    // Accepts the selected object from CustomSelect: { key, value }
+    if (selected && selected.value) {
+        selectedConfig.value = selected.value;
+        localStorage.setItem("ollamaConfig", selected.value);
     } else {
+        selectedConfig.value = "";
         localStorage.removeItem("ollamaConfig");
     }
 
@@ -219,7 +246,6 @@ async function handleSelectedConfig() {
     });
 
     console.log("Response handleSelectConfig", await res.json());
-
 }
 
 async function handleLoadOllamaConfig() {
@@ -316,11 +342,12 @@ onMounted(async () => {
                             </tr>
                         </tbody>
                     </table>
-                    <select v-model="selectedGroupId" @change="handleGroupChange">
+                    <!-- <select v-model="selectedGroupId" @change="handleGroupChange">
                         <option v-for="(group, index) in groups" :value="group.userGroup_idUserGroup" :key="index">
                             {{ group.name }}
                         </option>
-                    </select>
+                    </select> -->
+                    <CustomSelect :values="groupsReType" :currentSelection="selectedGroupReType" :updateHandler="handleGroupChange" />
                 </div>
             </li>
             <li
@@ -353,9 +380,10 @@ onMounted(async () => {
 
                 <div class="tile-column">
                     <h3>AI Proccessor</h3>
-                    <select @change="handleSelectedConfig" :value="selectedConfig" v-model="selectedConfig">
+                    <!-- <select @change="handleSelectedConfig" :value="selectedConfig" v-model="selectedConfig">
                         <option v-for="config in ollamaConfigs" :value="config">{{ config }}</option>
-                    </select>
+                    </select> -->
+                    <CustomSelect :values="ollamaConfigsReType" :currentSelection="selectedConfigReType" :updateHandler="handleSelectedConfig" />
                     <button @click="handleLoadOllamaConfig">Load Config</button>
                     <div v-if="isLoading" class="loading-gif-container-settings"><img class="loading-gif-settings" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
                     <div v-else class="loading-gif-container-settings"></div>
