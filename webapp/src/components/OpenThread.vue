@@ -6,6 +6,8 @@ import MarkdownIt from 'markdown-it';
 
 import { sendPrompt, aiChunks, socket } from '../composables/useSocket';
 
+import CustomSelect from './CustomSelect.vue';
+import { type CustomSelectType } from '../types/CustomSelectType';
 const md = new MarkdownIt();
 
 const props = defineProps<{title: string, index: number, idThread: number, models: any[]}>();
@@ -21,6 +23,18 @@ const assetBase = isElectron ? './animation/' : '/animation';
 // define referene for the title
 const threadTitle = ref(props.title);
 const models = ref<ModelOption[]>(props.models as ModelOption[]);
+
+const modelsReType = ref<CustomSelectType[]>(
+  models.value.map(model => ({
+    key: model.modelName,
+    value: model.modelFullName
+  }))
+);
+
+const currentModelReType = computed<CustomSelectType>(() => ({
+  key: currentModel.value?.modelName ?? '',
+  value: currentModel.value?.modelFullName ?? ''
+}));
 
 const currentModel = ref<ModelOption | null>(models.value[0] ?? null);
 const stored = localStorage.getItem("selectedModel");
@@ -266,9 +280,13 @@ console.log(props.models)
 console.log("Models: \n", models);
 
 // store the selected model in localStorage to keep for reload and other threads.
-function handleUpdateSelectedModel() {
-  localStorage.setItem("selectedModel", JSON.stringify(currentModel.value));
-  console.log(localStorage.getItem("selectedModel"));
+function handleUpdateSelectedModel(selected: CustomSelectType) {
+  const found = models.value.find(m => m.modelFullName === selected.value);
+  if (found) {
+    currentModel.value = found;
+    localStorage.setItem("selectedModel", JSON.stringify(found));
+    console.log(localStorage.getItem("selectedModel"));
+  }
 }
 
 </script>
@@ -313,10 +331,13 @@ function handleUpdateSelectedModel() {
     <div v-else class="loading-gif-container"></div>
 
     <div id="model-selector">
+    <CustomSelect :values="modelsReType" :currentSelection="currentModelReType" :updateHandler="handleUpdateSelectedModel" />
+    </div>
+    <!-- <div id="model-selector">
       <select name="" id="models" v-model="currentModel" @click="handleUpdateSelectedModel">
         <option v-for="(model, index) in models" :key="index" :value="model">{{model.modelName}}</option>
       </select>
-    </div>
+    </div> -->
     <!-- Prompt elements -->
     <form id="prompt" @submit.prevent="handlePrompt">
       <textarea type="text" name="send-message" v-model="prompt"></textarea>
@@ -584,32 +605,7 @@ $border-radius: 1rem;
   bottom: 20%;
   padding-left: calc(var(--space) * 2);
 
-  select {
-    height: 100%;
-    min-width: 0;
-    width: min(200px, 100%);
-
-    font-size: 24px;
-
-    padding-left: var(--space);
-
-    background-color: transparent;
-    border: solid 1px hsla(237, 100%, 70%, .2);
-    border-radius: $border-radius;
-
-    background-color: $bg-alpha-1;
-    color: $text-1;
-
-    backdrop-filter: blur(8px);
-
-    transition: .2s;
-
-    &:hover {
-      border-color: hsla(237, 100%, 70%, 1);
-    }
-
-  }
-
+  
 }
 
 .loading-gif-container {
