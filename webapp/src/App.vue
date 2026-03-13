@@ -320,7 +320,7 @@ const version = ref(pkg.build.productName+" "+pkg.version);
 
 <style lang="scss" scoped>
 #app-version {
-  position: absolute;
+  position: fixed;
   right: 0;
   bottom: 0;
   padding: var(--space);

@@ -299,7 +299,7 @@ onMounted(async () => {
             </li>
             <li class="flex-column">
                 <h2>Remote Connection</h2>
-                <div class="flex-row" style="gap: var(--space); align-items: center;">
+                <div class="tile-row width-70 gap">
                     <label for="settings-url">Starfish API Address</label>
                     <input id="settings-url" type="text" placeholder="http://192.168.1.x:3000" v-model="apiBase">
                     <button @click="handleSaveApi">Connect</button>
@@ -322,23 +322,23 @@ onMounted(async () => {
                         </thead>
                         <tbody>
                             <tr v-if="!editMode_models" v-for="(model, index) in models" :key="index">
-                                <th>{{ model.modelName }}</th>
-                                <th>{{ model.modelFullName }}</th>
-                                <th><div class="status-ready"></div></th>
+                                <td data-label="Name">{{ model.modelName }}</td>
+                                <td data-label="Full Name">{{ model.modelFullName }}</td>
+                                <td data-label="Status"><div class="status-ready"></div></td>
                             </tr>
                             <tr v-if="editMode_models" v-for="(model, index) in models" :key="index">
-                                <th>{{ model.modelName }}</th>
-                                <th>{{ model.modelFullName }}</th>
-                                <th><input type="checkbox" v-model="selectedModels" :value="model" :key="index"></th>
+                                <td data-label="Name">{{ model.modelName }}</td>
+                                <td data-label="Full Name">{{ model.modelFullName }}</td>
+                                <td data-label="Select"><input type="checkbox" v-model="selectedModels" :value="model" :key="index"></td>
                             </tr>
                             <tr>
-                                <th><input type="text" name="" id="modelName" placeholder="name" v-model="addName"></th>
-                                <th><input type="text" name="" id="modelFullName" placeholder="fullname" v-model="addFullName"></th>
-                                <th><button type="button" @click="addModelToGroup">Add</button></th>
-                                <th>
+                                <td data-label="Name"><input type="text" name="" id="modelName" placeholder="name" v-model="addName"></td>
+                                <td data-label="Full Name"><input type="text" name="" id="modelFullName" placeholder="fullname" v-model="addFullName"></td>
+                                <td data-label="Add"><button type="button" @click="addModelToGroup">Add</button></td>
+                                <td data-label="Progress">
                                     <div v-if="isLoading" class="loading-gif-container-settings"><img class="loading-gif-settings" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""><span>{{ downloadPercentage }}%</span></div>
                                     <div v-else class="loading-gif-container-settings"></div>
-                                </th>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -347,14 +347,17 @@ onMounted(async () => {
                             {{ group.name }}
                         </option>
                     </select> -->
-                    <CustomSelect :values="groupsReType" :currentSelection="selectedGroupReType" :updateHandler="handleGroupChange" />
+                    <div class="selector-constraint">
+                        <CustomSelect :values="groupsReType" :currentSelection="selectedGroupReType" :updateHandler="handleGroupChange" direction="down" />
+                    </div>
                 </div>
             </li>
             <li
             class="flex-column">
                 <h2>System</h2>
 
-                <div class="tile-column">
+                <div class="flex-row justify-start">
+                <div class="tile-row">
                     <table class="table">
                         <thead>
                             <tr>
@@ -365,12 +368,12 @@ onMounted(async () => {
                         </thead>
                         <tbody>
                             <tr v-for="service in systemServices">
-                                <th>{{ service.name }}</th>
-                                <th>{{ service.status }}</th>
-                                <th>
+                                <td data-label="Service">{{ service.name }}</td>
+                                <td data-label="Status">{{ service.status }}</td>
+                                <td data-label="Action">
                                     <div v-if="isLoading" class="loading-gif-container-settings"><img class="loading-gif-settings" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
                                     <div v-else class="loading-gif-container-settings"></div>
-                                </th>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -383,17 +386,20 @@ onMounted(async () => {
                     <!-- <select @change="handleSelectedConfig" :value="selectedConfig" v-model="selectedConfig">
                         <option v-for="config in ollamaConfigs" :value="config">{{ config }}</option>
                     </select> -->
-                    <CustomSelect :values="ollamaConfigsReType" :currentSelection="selectedConfigReType" :updateHandler="handleSelectedConfig" />
-                    <button @click="handleLoadOllamaConfig">Load Config</button>
+                    <div class="selector-constraint">
+                        <CustomSelect direction="right" :values="ollamaConfigsReType" :currentSelection="selectedConfigReType" :updateHandler="handleSelectedConfig" />
+                    </div>
+                    <button @click="handleLoadOllamaConfig" >Load Config</button>
                     <div v-if="isLoading" class="loading-gif-container-settings"><img class="loading-gif-settings" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
                     <div v-else class="loading-gif-container-settings"></div>
+                </div>
                 </div>
             </li>
         </ul>
     </div>
 </template>
 
-<style lang="scss">
+<style lang="scss" scoped>
 
 
 h1 {
@@ -415,13 +421,14 @@ h1 {
 
     backdrop-filter: blur(8px);
     display: flex;
-    justify-content: center;
-    align-items: center;
+    justify-content: start;
+    align-items: start;
 }
 #settings-menu {
+    position: static;
     width: 100%;
 
-    height: 100%;
+    height: fit-content;
 
     background-color: $bg-1;
 
@@ -461,10 +468,12 @@ h1 {
         width: 100%;
         display: flex;
         flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
+        justify-content: flex-start;
+        align-items: stretch;
         gap: $settings-space;
+        border-radius: $border-radius;
     }
+
     select {
         width: 30%;
         height: fit-content;
@@ -481,10 +490,11 @@ h1 {
     justify-content: center;
     align-items: center;
     width: clamp(200px, 50%, 300px);
+    height: fit-content;
     background-color: $bg-ac-1;
     border-radius: $border-radius;
     padding: $space;
-    
+
     h3 {
         align-self: flex-start;
     }
@@ -494,9 +504,42 @@ h1 {
     }
 }
 
+.tile-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: clamp(200px, 50%, 300px);
+    background-color: $bg-ac-1;
+    border-radius: $border-radius;
+    padding: $space;
+
+    h3 {
+        align-self: flex-start;
+    }
+
+    select {
+        min-width: 200px;
+    }
+}
+
+.width-70 {
+    min-width: clamp(200px, 70%, 500px);
+}
+
+.gap {
+    gap: var(--space-1);
+}
+
+.selector-constraint {
+    max-height: var(--font-size-1);
+}
+
 .table {
     width: 100%;
-    max-width: 400px;
+    flex: 1 1 0;
+    min-width: 0;
+    display: table;
     height: fit-content;
     background-color: $bg-ac-1;
     border-radius: $border-radius;
@@ -512,13 +555,14 @@ h1 {
             }
         }
     }
-    input {
-        color: $text-2;
-        background-color: $bg-ac-1;
-        border: 1px solid $key-1;
-        border-radius: $border-radius;
-        padding: $space-1;
-    }
+}
+
+input {
+    color: $text-2;
+    background-color: $bg-ac-1;
+    border: 1px solid $key-1;
+    border-radius: $border-radius;
+    padding: $space-1;
 }
 
 .status-ready {
@@ -528,6 +572,31 @@ h1 {
     border-radius: 100px;
 }
 
+button {
+    background-color: var(--key-1);
+
+    max-width: 100px;
+
+    margin: var(--space);
+    padding: var(--space-1);
+    border: none;
+    border-radius: var(--border-radius);
+
+    justify-self: center;
+
+    &:hover {
+        background-color: var(--key-1-bright);
+    }
+
+    &:active {
+        background-color: var(--key-1-alpha);
+    }
+}
+
+.justify-start {
+    justify-content: start!important;
+}
+
 #close-btn {
     background-color: transparent;
     background: transparent;
@@ -535,6 +604,7 @@ h1 {
     color: $text-2;
 
 }
+
 
 $scale-gif:50px;
 .loading-gif-container-settings {
@@ -559,14 +629,109 @@ $scale-gif:50px;
         padding: 1rem;
     }
     #settings-menu {
+        font-size: var(--font-size-5);
         .flex-row {
-            width: 100%;
+            width: 90%;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             align-items: center;
-            gap: $settings-space;
+            gap: calc($settings-space / 2);
+            overflow: scroll;
         }
+        .tile-row {
+            align-items: flex-start;
+            justify-content: start;
+            flex-direction: column;
+        }
+
+        .table {
+            width: 100%;
+            height: fit-content;
+            background-color: $bg-ac-1;
+            border-radius: $border-radius;
+            padding: $settings-space;
+
+            border-collapse: separate;
+            border-spacing: $settings-space calc($settings-space / 2);
+
+            tbody {
+                tr {
+                    th {
+                        font-weight:normal;
+                    }
+                }
+            }
+        }
+    }
+}
+
+@media (max-width: 600px) {
+    .flex-row {
+        flex-direction: column;
+        gap: calc($settings-space / 2);
+    }
+
+    .table {
+        display: block;
+        padding: calc($settings-space / 2);
+        border-radius: $border-radius;
+    }
+
+    .table thead {
+        display: none;
+    }
+
+    .table tbody tr {
+        display: block;
+        margin-bottom: $settings-space;
+        padding-bottom: $settings-space;
+        border-bottom: 1px solid $key-1;
+    }
+
+    .table tbody td {
+        display: flex;
+        justify-content: space-between;
+        padding: calc($space / 4) 0;
+        align-items: center;
+    }
+
+    .table tbody td:before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: $text-2;
+        margin-right: $space-1;
+        flex: 1;
+        text-align: left;
+    }
+
+    .table tbody td > * {
+        flex: 2;
+        text-align: right;
+    }
+
+    input, select, button, .custom-select {
+        width: 90% !important;
+        max-width: none;
+    }
+
+    button {
+        max-width: none;
+        width: 100%;
+        margin: 0.5rem 0;
+    }
+
+    .tile-column, .tile-row {
+        width: 100%;
+    }
+
+    .width-70 {
+        min-width: 90%;
+        max-width: 90%;
+    }
+
+    .loading-gif-container-settings {
+        justify-content: flex-end;
     }
 }
 </style>
