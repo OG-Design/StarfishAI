@@ -3,7 +3,7 @@
 import { ref, watch } from 'vue';
 import { type CustomSelectType } from '../types/CustomSelectType';
 
-const props = defineProps<{values: CustomSelectType[], currentSelection: CustomSelectType, updateHandler: (selected: CustomSelectType) => void}>();
+const props = defineProps<{ direction: any | undefined, values: CustomSelectType[], currentSelection: CustomSelectType, updateHandler: (selected: CustomSelectType) => void}>();
 
 const isRendered = ref<boolean>(false);
 
@@ -28,7 +28,23 @@ watch(() => props.currentSelection, (newVal) => {
 
 </script>
 <template>
-    <div id="selector">
+    <div id="selector" v-if="direction === 'down'">
+      <button class="selection" @click="handleRenderOptions">
+        {{ props.currentSelection.key }} ^
+      </button>
+      <section class="selectable-column" :style="{display: isRendered ? 'flex' : 'none'}">
+        <button v-for="(value, index) in props.values" :key="index" :value="value.value" @click="handleChange(value.value)">{{ value.key }}</button>
+      </section>
+    </div>
+    <div id="selector-row" v-else-if="direction === 'right'">
+      <section class="selectable-column" :style="{display: isRendered ? 'flex' : 'none'}">
+        <button v-for="(value, index) in props.values" :key="index" :value="value.value" @click="handleChange(value.value)">{{ value.key }}</button>
+      </section>
+      <button class="selection" @click="handleRenderOptions">
+        {{ props.currentSelection.key }} ^
+      </button>
+    </div>
+    <div id="selector" v-else>
       <section class="selectable-column" :style="{display: isRendered ? 'flex' : 'none'}">
         <button v-for="(value, index) in props.values" :key="index" :value="value.value" @click="handleChange(value.value)">{{ value.key }}</button>
       </section>
@@ -45,92 +61,110 @@ watch(() => props.currentSelection, (newVal) => {
   bottom: 20%;
   padding-left: calc(var(--space) * 2);
 
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 
-  .selectable-column {
-    height: fit-content;
-    max-height: 200px;
-    min-width: min(200px, 100%);
-    width: min(200px, 100%);
+}
 
-    overflow-y: scroll;
+#selector-row {
 
-    display: flex;
-    flex-direction: column;
-    justify-content: start;
-    align-items: start;
+  width: fit-content;
+  bottom: 20%;
+  padding-left: calc(var(--space) * 2);
 
-    gap: var(--space-2);
-
-    margin-bottom: var(--space);
-
-    font-size: 24px;
-
-
-    background-color: transparent;
-    border: solid 1px hsla(237, 100%, 70%, .2);
-    border-radius: $border-radius;
-
-    background-color: $bg-alpha-1;
-    color: $text-1;
-
-    backdrop-filter: blur(8px);
-
-    transition: .2s;
-
-    &:hover {
-      border-color: var(--key-1);
-    }
-
-    button {
-
-        width: 100%;
-        max-height: 32px;
-
-        white-space: nowrap;
-        overflow-y: scroll;
-        scrollbar-width: none;
-
-        border: none;
-        border-top: 1px solid;
-        border-bottom: 1px solid;
-        border-color: hsla(237, 100%, 100%, 0);
-        background-color: hsla(237, 100%, 100%, 0);
-
-        font-size: 24px;
-        &:hover {
-          border-color: var(--key-1);
-          background-color: hsla(237, 100%, 100%, .1);
-        }
-    }
-
-  }
+  display: flex;
+  flex-direction: row-reverse;
+  gap: var(--space-2);
 
   .selection {
-    height: 100%;
-    min-width: 0;
-    width: min(200px, 100%);
+    width: 100%;
+  }
 
-    font-size: 24px;
+}
 
-    white-space: nowrap;
-    overflow-y: scroll;
-    scrollbar-width: none;
+.selectable-column {
+  height: fit-content;
+  max-height: 200px;
+  min-width: min(200px, 100%);
+  width: min(200px, 100%);
 
-    background-color: transparent;
-    border: solid 1px hsla(237, 100%, 70%, .2);
-    border-radius: $border-radius;
+  overflow-y: scroll;
 
-    background-color: $bg-alpha-1;
-    color: $text-1;
+  display: flex;
+  flex-direction: column;
+  justify-content: start;
+  align-items: start;
 
-    backdrop-filter: blur(8px);
+  gap: var(--space-2);
 
-    transition: .2s;
 
-    &:hover {
-      border-color: var(--key-1);
-    }
+  font-size: 24px;
 
+
+  background-color: transparent;
+  border: solid 1px hsla(237, 100%, 70%, .2);
+  border-radius: $border-radius;
+
+  background-color: $bg-alpha-1;
+  color: $text-1;
+
+  backdrop-filter: blur(8px);
+
+  transition: .2s;
+
+  &:hover {
+    border-color: var(--key-1);
+  }
+
+  button {
+
+      width: 100%;
+      max-height: 32px;
+
+      white-space: nowrap;
+      overflow-y: scroll;
+      scrollbar-width: none;
+
+      border: none;
+      border-top: 1px solid;
+      border-bottom: 1px solid;
+      border-color: hsla(237, 100%, 100%, 0);
+      background-color: hsla(237, 100%, 100%, 0);
+
+      font-size: 24px;
+      &:hover {
+        border-color: var(--key-1);
+        background-color: hsla(237, 100%, 100%, .1);
+      }
+  }
+
+}
+
+.selection {
+  height: 100%;
+  min-width: 0;
+  width: min(200px, 100%);
+
+  font-size: 24px;
+
+  white-space: nowrap;
+  overflow-y: scroll;
+  scrollbar-width: none;
+
+  background-color: transparent;
+  border: solid 1px hsla(237, 100%, 70%, .2);
+  border-radius: $border-radius;
+
+  background-color: $bg-alpha-1;
+  color: $text-1;
+
+  backdrop-filter: blur(8px);
+
+  transition: .2s;
+
+  &:hover {
+    border-color: var(--key-1);
   }
 
 }
