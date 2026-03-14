@@ -46,23 +46,40 @@ export class AuthController {
 
         console.log("Making JWT token for user,", user.username);
 
+        const tokens = user.tokens;
+
         // make jwt for the websocket connection etc
-        const token = jwt.sign(
-            {idUser: user.idUser, username: user.username}, //payload
-            secretJWT, // token secret CHANGE
-            {expiresIn: '1h'} // expiration time
-        );
+        // const token = jwt.sign(
+        //     {idUser: user.idUser, username: user.username}, //payload
+        //     secretJWT, // token secret CHANGE
+        //     {expiresIn: '1h'} // expiration time
+        // );
 
         // set cookie http only
-        res.cookie('jwt', token, cookieOptions(req, 10 * 60 * 1000));
+        // res.cookie('jwt', token, cookieOptions(req, 10 * 60 * 1000));
+        res.cookie('jwt', tokens.access, cookieOptions(req, 10 * 60 * 1000));
+        res.cookie('refresh', tokens.refresh, cookieOptions(req, 7 * 24 * 60 * 60 * 1000));
 
-        console.log("Token generated:\n", token);
+        console.log("Token generated:\n", tokens);
         return res.json({ message: "Logged in successfully" });
     }
 
     @Get('check/token')
     requestToken() {
 
+    }
+
+    @Get('refresh/token')
+    refreshToken(@Req() req: Request, @Res() res: Response) {
+        const refreshToken = req.cookies?.refresh;
+        if (!refreshToken) {
+            return res.status(401).json({ message: 'No refresh token provided'});
+        }
+        try {
+
+        } catch (err) {
+            return res.status(401).json({ message: 'Invalid refresh token'});
+        }
     }
 
     @Get('check')

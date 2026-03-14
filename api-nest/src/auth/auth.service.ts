@@ -19,6 +19,7 @@ const saltRounds: number = 10;
 
 @Injectable()
 export class AuthService {
+    // init redis
     private redis: Redis;
 
     constructor(private config: ConfigService) {
@@ -50,7 +51,23 @@ export class AuthService {
                 throw new UnauthorizedException("Username or password incorrect");
             }
 
-            return user;
+            
+            const it = this.issueTokens(user.idUser, user.username);
+            const it_jti = it.jti;
+            const it_refresh = it.refreshToken;
+            
+
+            await this.saveRefresh(user.idUser, it_jti, it_refresh);
+
+            const authRes: any = {
+                user,
+                tokens: {
+                    access: it.accessToken,
+                    refresh: it_refresh
+                }
+            }
+
+            return authRes;
 
         } catch (err) {
             if (err instanceof UnauthorizedException) {
@@ -66,9 +83,9 @@ export class AuthService {
         // console.log("Session check ", session);
         console.log("Session user", user);
 
-        // const cookieHeader = session.handshake.headers.cookie ?? '';
+        const cookieHeader = session.handshake.headers.cookie ?? '';
 
-        // console.log("Cookie header:", cookieHeader);
+        console.log("Cookie header:", cookieHeader);
         /*
         ---parse cookies---
         split removes ; reduce uses an accumilator-
@@ -76,14 +93,14 @@ export class AuthService {
         if the key is invalid it returns acc.
         else it decodes the value and returns that.
         */
-        // const cookies = cookieHeader.split(';').reduce((acc: any, part: any) => {
-        // const [k, ...v] = part.trim().split('=');
-        // if (!k) return acc;
-        // acc[k] = decodeURIComponent(v.join('='));
-        // return acc;
-        // }, {} as Record<string, string>);
+        const cookies = cookieHeader.split(';').reduce((acc: any, part: any) => {
+        const [k, ...v] = part.trim().split('=');
+        if (!k) return acc;
+        acc[k] = decodeURIComponent(v.join('='));
+        return acc;
+        }, {} as Record<string, string>);
 
-        // const token = cookies.jwt;
+        const token = cookies.jwt;
 
 
         if (!session.user) {
@@ -108,14 +125,17 @@ export class AuthService {
         };
     }
 
+    // generate jwt token
     private hashToken(token: string) {
         return createHash("sha256").update(token).digest('hex');
     }
 
+    // refresh jwt token
     private refreshKey(idUser: number, jti: string) {
         return `refresh:${idUser}:${jti}`;
     }
 
+    // issue jwt token
     private issueTokens(idUser: number, username: string) {
         const jti = randomUUID();
         const accessToken = jwt.sign({ sub: idUser, username}, secretJWT, {expiresIn: '15m'});
@@ -123,11 +143,13 @@ export class AuthService {
         return {accessToken, refreshToken, jti};
     }
 
+    // save refresh token
     private async saveRefresh(idUser: number, jti: string, refreshToken: string) {
         const ttlSeconds = 7 * 24 * 60 * 60;
         await this.redis.set(this.refreshKey(idUser, jti), this.hashToken(refreshToken), 'EX', ttlSeconds);
     }
 
+    // rotate the refresh token
     private async rotateRefresh(refreshToken: string) {
         const payload = jwt.verify(refreshToken, secretJWT) as { sub: number; jti: string };
         const key = this.refreshKey(payload.sub, payload.jti);
