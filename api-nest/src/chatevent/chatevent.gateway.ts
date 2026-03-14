@@ -8,6 +8,7 @@ import * as jwt from "jsonwebtoken";
 import { secretJWT } from "src/secretJWT";
 
 import { ConfigService } from '@nestjs/config';
+import { AuthService } from 'src/auth/auth.service';
 
 import db from '../db';
 
@@ -28,7 +29,7 @@ import { threadId } from 'worker_threads';
 })
 export class ChateventGateway {
   private readonly ollamaURL:string;
-  constructor(private readonly config: ConfigService) {
+  constructor(private readonly config: ConfigService, private readonly authService: AuthService) {
     this.ollamaURL = this.config.get<string>('OLLAMA_URL') ?? "";
   }
 
@@ -61,6 +62,7 @@ export class ChateventGateway {
     }, {} as Record<string, string>);
 
     const token = cookies.jwt;
+    const refresh = cookies.refresh;
 
     console.log("db path:",process.env.DB_PATH);
     console.log("Connection open on ChateventGateway, running for thread", data.thread)
@@ -93,16 +95,49 @@ export class ChateventGateway {
 
       try {
         // verify token
-        userToken = jwt.verify(token, secretJWT);
+        userToken = jwt.verify(token, secretJWT) as any;
+        // check if this access token has been revoked
+        if (userToken && userToken.sub && userToken.jti) {
+          const revoked = await this.authService.isAccessRevoked(userToken.sub, userToken.jti);
+          if (revoked) {
+            console.error('Access token revoked for user', userToken.sub, 'jti', userToken.jti);
+            client.emit('error', { message: 'Token revoked' });
+            client.disconnect();
+            return;
+          }
+        }
       } catch (err) {
-        console.error("JWT not valid");
-        client.emit('error', {message: 'Invalid JWT'});
-        client.disconnect();
-        return;
+        console.error("JWT not valid", err);
+        // try to rotate with refresh token if available
+        if (refresh && typeof refresh === 'string') {
+          try {
+            const tokens = await this.authService.rotateRefresh(refresh);
+            // use new access token for this request
+            userToken = jwt.verify(tokens.accessToken, secretJWT) as any;
+            // NOTE: we can't set cookies on the websocket handshake here; client should call /auth/refresh/token to update cookies
+            if (userToken && userToken.sub && userToken.jti) {
+              const revoked = await this.authService.isAccessRevoked(userToken.sub, userToken.jti);
+              if (revoked) {
+                console.error('Access token revoked after refresh for user', userToken.sub);
+                client.emit('error', { message: 'Token revoked' });
+                client.disconnect();
+                return;
+              }
+            }
+          } catch (e) {
+            console.error('Refresh failed', e);
+            client.emit('error', { message: 'Authentication failed' });
+            client.disconnect();
+            return;
+          }
+        } else {
+          client.emit('error', {message: 'Invalid JWT'});
+          client.disconnect();
+          return;
+        }
       }
-      
 
-      idUser = userToken.idUser;
+      idUser = (userToken as any).sub ?? (userToken as any).idUser;
     }
 
     const thread_author = db.prepare('SELECT * FROM thread WHERE author_idUser = ? AND idThread = ? ').all(idUser, thread)
@@ -181,7 +216,7 @@ export class ChateventGateway {
       db.prepare("INSERT INTO message (data, idThread) VALUES (?, ?)").run(JSON.stringify(messageResponse), thread);
 
       client.emit('ai_complete');
-    } catch (err) {
+    } catch (err: any) {
       console.error("Ollama error:", err);
       client.emit('error', {
         message: err.error || 'Failed to process your request',

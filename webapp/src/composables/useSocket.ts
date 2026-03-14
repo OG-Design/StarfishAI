@@ -15,14 +15,35 @@ async function checkSession(): Promise<boolean> {
 
     console.log("Checking JWT");
 
-    const res = await apiFetch('/api/auth/check', {credentials: 'include'});
-
+    const res = await apiFetch('/api/auth/check');
     const data = await res.json();
+    console.log("Session: ", data);
 
-    console.log("Session: ", await data);
+    if (data.isAuth) return true;
 
-    return data.isAuth;
+    // try refresh once
+    const refreshed = await tryRefresh();
+    if (!refreshed) return false;
 
+    // re-check session after refresh
+    const res2 = await apiFetch('/api/auth/check');
+    const data2 = await res2.json();
+    return data2.isAuth;
+}
+
+async function tryRefresh(): Promise<boolean> {
+    try {
+        const res = await apiFetch('/api/auth/refresh/token', { method: 'GET' });
+        if (!res.ok) {
+            console.warn('Refresh failed, status', res.status);
+            return false;
+        }
+        console.log('Refresh succeeded');
+        return true;
+    } catch (err) {
+        console.error('Refresh error', err);
+        return false;
+    }
 
 }
 
@@ -62,8 +83,18 @@ async function createSocket(): Promise<Socket | null> {
         }
     });
 
-    s.on('connect_error', (err: Error) => {
+    s.on('connect_error', async (err: Error) => {
         console.error("Socket connection error:", err);
+        // attempt to refresh tokens once then reconnect
+        const ok = await tryRefresh();
+        if (ok) {
+            console.log('Reconnecting socket after refresh');
+            try {
+                s.connect();
+            } catch (e) {
+                console.error('Reconnect failed', e);
+            }
+        }
     });
 
     return s;
