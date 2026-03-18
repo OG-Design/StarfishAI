@@ -49,6 +49,7 @@ async function tryRefresh(): Promise<boolean> {
 
 // creates socket
 async function createSocket(): Promise<Socket | null> {
+    console.log("Attempting to connect to WebSocket...");
     const isAuth = await checkSession();
     if (!isAuth) {
         console.warn("Not authenticated, skipping socket connection.");
@@ -111,19 +112,16 @@ export async function connectSocket(): Promise<Socket | null> {
 
 // sends prompt messages with the model name attached.
 export async function sendPrompt(thread: number, message: object, model: string): Promise<void> {
-    console.log("Sending prompt: ", message)
-    // refresh chunk storage
+    console.log("Sending prompt:", { thread, message, model });
     aiChunks.value = [];
 
-
-    if(!socket || !socket.connected) {
+    if (!socket || !socket.connected) {
         await connectSocket();
     }
 
-    // checks the socket connection, if socket, emit the prompt 'method'
     if (socket && socket.connected) {
         console.log("Emitting prompt on socket id:", socket.id);
-        socket.emit('prompt', {thread, message, model});
+        socket.emit('prompt', { thread, message, model });
     } else {
         throw new Error('Socket not connected, call connectSocket() first');
     }

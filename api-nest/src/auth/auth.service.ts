@@ -52,7 +52,12 @@ export class AuthService {
         }
     }
 
-    // validates user credentials
+    /**
+     * Validates user credentials and issues tokens if valid
+     * @param username - The username of the user
+     * @param pasword - The password of the user
+     * @returns - An object containing user details and tokens
+    */
     async validateUser(username: string, password: string) {
 
         try {
@@ -75,7 +80,7 @@ export class AuthService {
                 throw new UnauthorizedException("Username or password incorrect");
             }
 
-            
+
             const it = this.issueTokens(user.idUser, user.username);
             const accessToken = it.accessToken;
             const refreshToken = it.refreshToken;
@@ -102,6 +107,12 @@ export class AuthService {
         }
     }
 
+
+    /**
+     * Validates session
+     * @param session
+     * @returns An object with a boolean value - isAuth
+     */
     isAuth(session: Record<string, any>): object {
         const user = session.user;
         // console.log("Session check ", session);
@@ -129,13 +140,6 @@ export class AuthService {
 
         if (!session.user) {
 
-            // make jwt for the websocket connection etc
-            // const token = jwt.sign(
-            //     {idUser: user.idUser, username: user.username}, //payload
-            //     secretJWT, // token secret CHANGE
-            //     {expiresIn: '10h'} // expiration time
-            // );
-
             return {
                 isAuth: false,
 
@@ -149,6 +153,10 @@ export class AuthService {
         };
     }
 
+    /**
+     * Destroys session, revokes / blacklists jwt's and logs user out
+     * @param req - The request body
+    */
     logout(req: any, res: any) {
         req.session.destroy( (err: any) => {
             // check for error
@@ -165,18 +173,31 @@ export class AuthService {
         });
     }
 
-    // generate jwt token
+    /**
+     * Hashes tokens
+     * @param token - the token pre hash
+     * @returns hash
+     */
     private hashToken(token: string) {
         return createHash("sha256").update(token).digest('hex');
     }
 
-    // refresh jwt token
+    /**
+     * Formats the refresh key
+     * @param idUser - The user's ID
+     * @param jti - The jwt's ID
+     * @returns formated: `refresh:<idUser>:<jti>`
+    */
     private refreshKey(idUser: number, jti: string) {
         return `refresh:${idUser}:${jti}`;
     }
 
-    // issue jwt token
-    // issue jwt token (returns both access and refresh JTIs)
+    /**
+     * Issue JWT tokens for authentication with websockets
+     * @param idUser - The user's ID
+     * @param username - The user's username
+     * @returns accessToken, refreshToken, accessJti, refreshJti
+    */
     private issueTokens(idUser: number, username: string) {
         const accessJti = randomUUID();
         const refreshJti = randomUUID();
@@ -185,7 +206,13 @@ export class AuthService {
         return { accessToken, refreshToken, accessJti, refreshJti };
     }
 
-    // save refresh token (uses Redis if available, otherwise in-memory Map)
+    /**
+     * Save the refresh as hashed value, idUser and jti as the value (uses Redis if available, otherwise in-memory map)
+     * @param idUser - The user's ID
+     * @param jti
+     * @param refreshToken
+     * @returns nothing
+     */
     private async saveRefresh(idUser: number, jti: string, refreshToken: string) {
         const ttlSeconds = 7 * 24 * 60 * 60;
         const key = this.refreshKey(idUser, jti);
@@ -200,6 +227,13 @@ export class AuthService {
         setTimeout(() => this.inMemoryRefresh.delete(key), ttlSeconds * 1000).unref?.();
     }
 
+    /**
+     * Revokes access to a JWT
+     * @param idUser - The user's ID
+     * @param accessJti
+     * @param ttlSeconds
+     * @returns nothing
+     */
     // revoke a specific access token by jti (blacklist)
     async revokeAccess(idUser: number, accessJti: string, ttlSeconds: number) {
         const key = `blacklist:access:${idUser}:${accessJti}`;
@@ -212,6 +246,12 @@ export class AuthService {
         setTimeout(() => this.inMemoryRefresh.delete(key), ttlSeconds * 1000).unref?.();
     }
 
+    /**
+     * Checkt the validity of an access token
+     * @param idUser - The user's ID
+     * @param accessJti
+     * @returns blacklist or null
+     */
     // check if access jti is revoked
     async isAccessRevoked(idUser: number, accessJti: string) {
         const key = `blacklist:access:${idUser}:${accessJti}`;
@@ -222,6 +262,11 @@ export class AuthService {
         return this.inMemoryRefresh.has(key);
     }
 
+    /**
+     * Revokes all refresh tokens for a user
+     * @param idUser - The user's ID
+     * @returns nothing
+     */
     // revoke all refresh tokens for a user
     async revokeAllRefreshForUser(idUser: number) {
         const pattern = `refresh:${idUser}:*`;
@@ -241,6 +286,11 @@ export class AuthService {
         }
     }
 
+    /**
+     * Rotates the tokens
+     * @param refreshToken
+     * @returns An object containting accessToken & refreshToken
+     */
     // rotate the refresh token and return new tokens
     async rotateRefresh(refreshToken: string) {
         let payload: { sub: number; jti: string };
@@ -250,14 +300,20 @@ export class AuthService {
             throw new UnauthorizedException('Invalid refresh token');
         }
 
+        // format payload
         const key = this.refreshKey(payload.sub, payload.jti);
+
+
         let stored: string | null = null;
+
+        // check if redis is used
         if (this.useRedis && this.redis) {
             stored = await this.redis.get(key);
         } else {
             stored = this.inMemoryRefresh.get(key) ?? null;
         }
 
+        // throw error if stored is invalid
         if (!stored || stored !== this.hashToken(refreshToken)) throw new UnauthorizedException('Invalid refresh');
 
         // invalidate old refresh
@@ -272,6 +328,7 @@ export class AuthService {
         const username = row?.username ?? '';
 
         const { accessToken, refreshToken: newRefresh, refreshJti: newJti } = this.issueTokens(payload.sub, username);
+
         await this.saveRefresh(payload.sub, newJti, newRefresh);
 
         return { accessToken, refreshToken: newRefresh };

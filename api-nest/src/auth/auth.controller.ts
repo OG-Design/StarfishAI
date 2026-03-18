@@ -34,6 +34,7 @@ export class AuthController {
     @Post('login')
     async login (@Body() body:  {username: string, password: string}, @Req() req: Request, @Res() res: Response) {
         try {
+            // verify user credentials
             const authRes: any = await this.authService.validateUser(body.username, body.password);
 
             // if no session
@@ -50,19 +51,9 @@ export class AuthController {
             req.session.user = user;
             // console.log('Session after login:', req.session);
 
-            // console.log("Making JWT token for user,", user.username);
 
             const tokens = authRes.tokens;
 
-        // make jwt for the websocket connection etc
-        // const token = jwt.sign(
-        //     {idUser: user.idUser, username: user.username}, //payload
-        //     secretJWT, // token secret CHANGE
-        //     {expiresIn: '1h'} // expiration time
-        // );
-
-        // set cookie http only
-        // res.cookie('jwt', token, cookieOptions(req, 10 * 60 * 1000));
             res.cookie('jwt', tokens.access, cookieOptions(req, 10 * 60 * 1000));
             res.cookie('refresh', tokens.refresh, cookieOptions(req, 7 * 24 * 60 * 60 * 1000));
 
@@ -75,23 +66,24 @@ export class AuthController {
         }
     }
 
-    @Get('check/token')
-    requestToken() {
-
-    }
-
+    // refresh token
     @Get('refresh/token')
     async refreshToken(@Req() req: Request, @Res() res: Response) {
         try {
+
+            // check if refresh token exists
             const refreshToken = req.cookies?.refresh;
             if (!refreshToken) {
                 return res.status(401).json({ message: 'No refresh token provided' });
             }
 
+            // rotate refresh token
             const tokens = await this.authService.rotateRefresh(refreshToken);
+
             // set cookies for new tokens
             res.cookie('jwt', tokens.accessToken, cookieOptions(req, 10 * 60 * 1000));
             res.cookie('refresh', tokens.refreshToken, cookieOptions(req, 7 * 24 * 60 * 60 * 1000));
+
             return res.json({ message: 'Tokens refreshed' });
         } catch (err) {
             console.error('Refresh error:', err);
@@ -99,6 +91,7 @@ export class AuthController {
         }
     }
 
+    // check session
     @Get('check')
     check(@Req() req: Request, @Res() res: Response) {
         const user: any = req.session?.user;
@@ -137,11 +130,14 @@ export class AuthController {
                 const userId = payload?.sub ?? payload?.idUser;
                 const accessJti = payload?.jti;
 
+
                 if (userId) {
                     if (accessJti) {
+                        // revoke token access
                         console.log('Revoking jwt access');
                         const now = Math.floor(Date.now() / 1000);
                         const ttl = Math.max(0, (payload.exp ?? now) - now);
+
                         // revoke access token jti
                         await this.authService.revokeAccess(userId, accessJti, ttl);
                     }
