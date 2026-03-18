@@ -7,6 +7,7 @@ import { AppModule } from './app.module';
 import {sessionMiddleware, adaptSessionCookie} from './session';
 import { SessionIoAdapter } from './socket-io.adapter';
 import { type } from 'os';
+import cookieParser from 'cookie-parser';
 
 import { ConfigService } from '@nestjs/config';
 
@@ -37,6 +38,7 @@ async function bootstrap() {
 
   app.use(sessionMiddleware);
   app.use(adaptSessionCookie);
+  app.use(cookieParser());
 
   // Check electron mode
   app.use((req: any, res: any, next: any) => {
@@ -49,8 +51,14 @@ async function bootstrap() {
   app.useWebSocketAdapter(new SessionIoAdapter(app)) // websocket sessions
 
   app.use((req, res, next) => {
-    console.log('Session:', req.session);
+    // console.log('Session:', req.session);
     next();
+  });
+
+  // Simple error-logging middleware to capture unexpected server errors (500)
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error('Unhandled error for', req.method, req.url, err && err.stack ? err.stack : err);
+    next(err);
   });
 
   await app.listen(PORT, '0.0.0.0'); // listen on all network interfaces

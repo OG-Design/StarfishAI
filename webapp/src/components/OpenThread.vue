@@ -152,66 +152,83 @@ const currentMessage = computed(()=>aiChunks.value.join(''));
 // handles the users prompt and refreshes messages in the open thread
 function handlePrompt() {
 
-  if(!currentModel.value) return console.log("No model selected"); // check if current model exists
+  if (!currentModel.value) return console.log("No model selected"); // check if current model exists
 
-  // scroll to bottom
-  scrollToBottom();
+  // Structure the user message
+  const message = { role: "user", content: prompt.value };
 
-  isLoading.value=true; // set loading to true
+  // Add the prompt message to the messages array immediately
+  messages.value.push(message);
 
-
-  // structure message with the prompts value
-  const message = {"role": "user", "content": prompt.value}
-
+  // Clear the input field
   prompt.value = null;
 
-  // if the socket is connected alert the user and set loading to false
-  if (!socket) {
-    alert("Socket not connected.");
-    isLoading.value = false;
-    return;
-  }
+  // Scroll to the bottom of the thread
+  scrollToBottom();
 
-  getAllMessages().then(() => {
-    // scroll to bottom
-    scrollToBottom()
+  // Set loading state to true
+  isLoading.value = true;
 
-  }); //get all messages after prompt is done processing
-
+  // Send the prompt via WebSocket
   sendPrompt(props.idThread, message, currentModel.value.modelFullName); // model: llama3 llama3.2 smollm2:135m dolphin-phi
 
   console.log("Selected model:", currentModel.value);
 
-  // log chunks
-  console.log(aiChunks);
+  // Debug log to verify messages
+  console.log("Messages after sending prompt:", messages.value);
 
+  // Create a placeholder for the assistant's message
+  let assistantMessage = { role: 'assistant', content: '', complete: false };
+  messages.value.push(assistantMessage);
 
+  // Handle WebSocket events
+  const handleChunk = (chunk: any) => {
+    // Append the chunk to the assistant's message content
+    assistantMessage.content += chunk;
 
-  // on ai_complete
-  socket.once('ai_complete', () => {
-    // set isLoading to false
-    isLoading.value=false;
-  });
+    // Trigger Vue reactivity for the messages array
+    messages.value = [...messages.value];
 
-  // give feedback on error aswell as setting isLoading to false
-  socket.once('error', (err: any) => {
+    // Scroll to the bottom of the thread
+    scrollToBottom();
+  };
+
+  const handleComplete = () => {
+    // Mark the assistant message as complete
+    assistantMessage.complete = true;
+
+    // Set loading state to false
+    isLoading.value = false;
+
+    // Clean up listeners
+    socket?.off('ai_chunk', handleChunk);
+    socket?.off('ai_complete', handleComplete);
+  };
+
+  // Set up WebSocket listeners
+  socket?.on('ai_chunk', handleChunk);
+  socket?.once('ai_complete', handleComplete);
+
+  socket?.once('error', (err) => {
     console.error("Socket error:", err);
     isLoading.value = false;
-    alert("Error occurred while processing your request.\n Error: "+err.message);
-  })
+    alert("Error occurred while processing your request.\n Error: " + err.message);
 
-  socket.once('connect_error', (err: any) => {
+    // Clean up listeners
+    socket?.off('ai_chunk', handleChunk);
+    socket?.off('ai_complete', handleComplete);
+  });
+
+  socket?.once('connect_error', (err) => {
     console.error("Connection error:", err);
     isLoading.value = false;
     alert("Connection error occurred");
 
-  })
-
-
+    // Clean up listeners
+    socket?.off('ai_chunk', handleChunk);
+    socket?.off('ai_complete', handleComplete);
+  });
 }
-
-
-
 
 // changes title of thread
 async function handleThreadChange() {
@@ -229,7 +246,7 @@ async function handleThreadChange() {
   }
 
   // the request made to the api
-  // const res = 
+  // const res =
   await apiFetch("/api/ai/thread/alter", {
     method:"POST",
     headers: {
@@ -251,7 +268,7 @@ async function handlePersonalityChange() {
     personality: personality.value
   }
 
-  // const res = 
+  // const res =
   await apiFetch("/api/ai/thread/alter/personality", {
     method: 'POST',
     headers: {
@@ -322,10 +339,12 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
         :key="index"
         v-html="md.render(message.content ?? '') /* render the message's content in markdown */ "
       ></li>
+
+      <!-- removed to prevent duplicating latest message after changes, remove completely after testing! -->
       <!-- Prints the latest message -->
-      <li v-if="currentMessage" class="message markdown-content" v-html="md.render(currentMessage)">
-      </li>
-      
+      <!--<li v-if="currentMessage" class="message markdown-content" v-html="md.render(currentMessage)">
+      </li>-->
+
     </ul>
     <div v-if="isLoading" class="loading-gif-container"><img class="loading-gif" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
     <div v-else class="loading-gif-container"></div>

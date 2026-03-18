@@ -313,8 +313,8 @@ onMounted(async () => {
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Full Name</th>
+                                <th>Display Name</th>
+                                <th>Model Name</th>
                                 <th v-if="!editMode_models">Status</th>
                                 <th v-if="editMode_models"><button @click="deleteSelectedModels">Delete</button></th>
                                 <th><button @click="toggleEditMode">...</button></th>
@@ -322,18 +322,18 @@ onMounted(async () => {
                         </thead>
                         <tbody>
                             <tr v-if="!editMode_models" v-for="(model, index) in models" :key="index">
-                                <td data-label="Name">{{ model.modelName }}</td>
-                                <td data-label="Full Name">{{ model.modelFullName }}</td>
+                                <td data-label="Display Name">{{ model.modelName }}</td>
+                                <td data-label="Model Name">{{ model.modelFullName }}</td>
                                 <td data-label="Status"><div class="status-ready"></div></td>
                             </tr>
                             <tr v-if="editMode_models" v-for="(model, index) in models" :key="index">
-                                <td data-label="Name">{{ model.modelName }}</td>
-                                <td data-label="Full Name">{{ model.modelFullName }}</td>
+                                <td data-label="Display Name">{{ model.modelName }}</td>
+                                <td data-label="Model Name">{{ model.modelFullName }}</td>
                                 <td data-label="Select"><input type="checkbox" v-model="selectedModels" :value="model" :key="index"></td>
                             </tr>
                             <tr>
-                                <td data-label="Name"><input type="text" name="" id="modelName" placeholder="name" v-model="addName"></td>
-                                <td data-label="Full Name"><input type="text" name="" id="modelFullName" placeholder="fullname" v-model="addFullName"></td>
+                                <td data-label="Display Name"><input type="text" name="" id="modelName" placeholder="name" v-model="addName"></td>
+                                <td data-label="Model Name"><input type="text" name="" id="modelFullName" placeholder="fullname" v-model="addFullName"></td>
                                 <td data-label="Add"><button type="button" @click="addModelToGroup">Add</button></td>
                                 <td data-label="Progress">
                                     <div v-if="isLoading" class="loading-gif-container-settings"><img class="loading-gif-settings" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""><span>{{ downloadPercentage }}%</span></div>

@@ -15,19 +15,41 @@ async function checkSession(): Promise<boolean> {
 
     console.log("Checking JWT");
 
-    const res = await apiFetch('/api/auth/check', {credentials: 'include'});
-
+    const res = await apiFetch('/api/auth/check');
     const data = await res.json();
+    console.log("Session: ", data);
 
-    console.log("Session: ", await data);
+    if (data.isAuth) return true;
 
-    return data.isAuth;
+    // try refresh once
+    const refreshed = await tryRefresh();
+    if (!refreshed) return false;
 
+    // re-check session after refresh
+    const res2 = await apiFetch('/api/auth/check');
+    const data2 = await res2.json();
+    return data2.isAuth;
+}
+
+async function tryRefresh(): Promise<boolean> {
+    try {
+        const res = await apiFetch('/api/auth/refresh/token', { method: 'GET' });
+        if (!res.ok) {
+            console.warn('Refresh failed, status', res.status);
+            return false;
+        }
+        console.log('Refresh succeeded');
+        return true;
+    } catch (err) {
+        console.error('Refresh error', err);
+        return false;
+    }
 
 }
 
 // creates socket
 async function createSocket(): Promise<Socket | null> {
+    console.log("Attempting to connect to WebSocket...");
     const isAuth = await checkSession();
     if (!isAuth) {
         console.warn("Not authenticated, skipping socket connection.");
@@ -62,8 +84,18 @@ async function createSocket(): Promise<Socket | null> {
         }
     });
 
-    s.on('connect_error', (err: Error) => {
+    s.on('connect_error', async (err: Error) => {
         console.error("Socket connection error:", err);
+        // attempt to refresh tokens once then reconnect
+        const ok = await tryRefresh();
+        if (ok) {
+            console.log('Reconnecting socket after refresh');
+            try {
+                s.connect();
+            } catch (e) {
+                console.error('Reconnect failed', e);
+            }
+        }
     });
 
     return s;
@@ -80,19 +112,16 @@ export async function connectSocket(): Promise<Socket | null> {
 
 // sends prompt messages with the model name attached.
 export async function sendPrompt(thread: number, message: object, model: string): Promise<void> {
-    console.log("Sending prompt: ", message)
-    // refresh chunk storage
+    console.log("Sending prompt:", { thread, message, model });
     aiChunks.value = [];
 
-
-    if(!socket || !socket.connected) {
+    if (!socket || !socket.connected) {
         await connectSocket();
     }
 
-    // checks the socket connection, if socket, emit the prompt 'method'
     if (socket && socket.connected) {
         console.log("Emitting prompt on socket id:", socket.id);
-        socket.emit('prompt', {thread, message, model});
+        socket.emit('prompt', { thread, message, model });
     } else {
         throw new Error('Socket not connected, call connectSocket() first');
     }

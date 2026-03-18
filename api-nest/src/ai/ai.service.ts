@@ -207,7 +207,7 @@ export class AiService {
         return res;
     }
 
-
+    // Download AI model ollama
     addModel(
         model: {name: string, fullName: string},
         group: {name: string, idUserGroup?: number},
@@ -360,6 +360,7 @@ export class AiService {
 
     }
 
+    // get models available to user by group 
     async getModelsByGroup(
     group: {
         name: string,

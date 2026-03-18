@@ -3,7 +3,15 @@
 import { ref, watch } from 'vue';
 import { type CustomSelectType } from '../types/CustomSelectType';
 
-const props = defineProps<{ direction: any | undefined, values: CustomSelectType[], currentSelection: CustomSelectType, updateHandler: (selected: CustomSelectType) => void}>();
+
+const props = withDefaults(defineProps<{
+  direction?: any | null,
+  values: CustomSelectType[],
+  currentSelection: CustomSelectType,
+  updateHandler: (selected: CustomSelectType) => void
+}>(), {
+  direction: 'down',
+});
 
 const isRendered = ref<boolean>(false);
 
