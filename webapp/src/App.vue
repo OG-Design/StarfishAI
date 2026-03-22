@@ -171,6 +171,8 @@ function updateModels(payload: any) {
     localStorage.setItem("selectedGroup", JSON.stringify(selectedGroup.value));
     console.log("Selecting group:", selectedGroup.value.userGroup_idUserGroup, " ", selectedGroup.value.name);
   }
+
+
 }
 
 function handleUpdateSelectedGroup(group: any) {
@@ -248,59 +250,12 @@ function handleLogout() {
   authenticated.value=false
 }
 
-let devMode = false;
-let alphaMode = false;
 
 const version = ref(pkg.build.productName+" "+pkg.version);
 
 </script>
 
 <template>
-  <div v-if="devMode" style="
-  max-width: 0;
-  max-height: 0;
-  margin-left: calc(50vw - 125px);
-  margin-top: 5rem;
-  position: absolute;
-  z-index: 10000;
-  pointer-events: none;
-  ">
-  <p style="
-  width: 250px;
-  height: fit-content;
-  font-size: 20px;
-  background-color: var(--color-error-bg);
-  color: var(--color-error);
-  text-align: center;
-  margin: 0 auto;
-  
-  ">
-    Warning, this App is in dev mode! It may be unstable
-  </p>
-  </div>
-  <div v-if="alphaMode" style="
-  max-width: 0;
-  max-height: 0;
-  margin-left: calc(50vw - 125px);
-  margin-top: 5rem;
-  position: absolute;
-  z-index: 10000;
-  pointer-events: none;
-  ">
-  <p style="
-  width: 250px;
-  height: fit-content;
-  font-size: 20px;
-  background-color: var(--color-warning-bg);
-  color: var(--color-warning);
-  text-align: center;
-  margin: 0 auto;
-  
-  ">
-    Warning, this App is in alpha! It may be unstable
-  </p>
-  </div>
-
   <button id="toggle-menu-button" v-on:click="toggleMenu" :class="rotateMenuButton ? 'rotate-menu-button' : ''">→</button>
 
   <ElectronMessage v-if="isElectron"/>
@@ -327,7 +282,8 @@ const version = ref(pkg.build.productName+" "+pkg.version);
     :idThread="selectedThread && selectedThread.idThread ? selectedThread.idThread : 0"
     :key="selectedThread && selectedThread.idThread ? selectedThread.idThread : 0"
     @updateThreadTitle="handleUpdateThreadTitle"
-    :models="models"/>
+    :models="models"
+    @openSettings="handleOpenSettings"/>
   </template>
 </template>
 

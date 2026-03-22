@@ -283,8 +283,6 @@ function toggleEditMode() {
 
 async function deleteSelectedModels() {
 
-
-
     const body = {
         models: selectedModels.value
     }

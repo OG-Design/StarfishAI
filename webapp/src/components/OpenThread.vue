@@ -96,7 +96,7 @@ const messages = ref<any[]>([]);
 const personality = ref<string>('');
 const isLoading = ref(false);
 
-const emit = defineEmits(['updateThreadTitle']);
+const emit = defineEmits(['updateThreadTitle', 'openSettings']);
 
 
 const promptAnimationPoster = assetBase + '/ArrowToStop-poster.png';
@@ -112,6 +112,19 @@ function playPromptAnimation(src: string) {
     promptAnimationSrc.value = `${src}?v=${Date.now()}`;
   });
 }
+
+// update models available
+watch(()=> props.models, (newModels) => {
+  models.value = newModels as ModelOption[];
+  modelsReType.value = models.value.map((model) => ({
+    key: modelDisplayName(model),
+    value: modelKey(model)
+  }));
+
+  if(!models.value.find(m => modelKey(m) === currentModel.value?.modelFullName)) {
+    currentModel.value = models.value[0] ?? null;
+  }
+})
 
 watch(isLoading, (loading, prev) => {
   if (loading) {
@@ -416,6 +429,10 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
   }
 }
 
+function handleOpenSettings() {
+  emit('openSettings');
+}
+
 </script>
 
 <template>
@@ -478,8 +495,11 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
     <div v-if="isLoading" class="loading-gif-container"><img class="loading-gif" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
     <div v-else class="loading-gif-container"></div>
 
-    <div id="model-selector">
-    <CustomSelect :values="modelsReType" :currentSelection="currentModelReType" :updateHandler="handleUpdateSelectedModel" direction="up"/>
+    <div id="model-selector" v-if="models.length!==0">
+      <CustomSelect :values="modelsReType" :currentSelection="currentModelReType" :updateHandler="handleUpdateSelectedModel" direction="up"/>
+    </div>
+    <div id="model-selector" v-else>
+      <button class="add-model" @click="handleOpenSettings">Add model +</button>
     </div>
     <!-- <div id="model-selector">
       <select name="" id="models" v-model="currentModel" @click="handleUpdateSelectedModel">
@@ -897,6 +917,28 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
   bottom: 20%;
   padding-left: calc(var(--space) * 2);
 
+  .add-model {
+    height: 100%;
+    min-width: 110%;
+
+    font-size: 24px;
+
+    padding-left: var(--space);
+
+    background-color: transparent;
+    border: solid 1px var(--border-1);
+    border-radius: var(--border-radius);
+
+    background-color: var(--bg-alpha-2);
+
+    backdrop-filter: blur(8px);
+
+    transition: .2s;
+
+    &:hover {
+      border-color: var(--key-2-solid);
+    }
+  }
   
 }
 
