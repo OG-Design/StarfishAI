@@ -1,7 +1,7 @@
 const PORT_WEBAPP = 5173;
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean);
 
-import { Session, Body, UnauthorizedException} from '@nestjs/common';
+import { Session, Body, UnauthorizedException, BadRequestException} from '@nestjs/common';
 import { SubscribeMessage, WebSocketGateway, MessageBody, ConnectedSocket } from '@nestjs/websockets';
 
 import * as jwt from "jsonwebtoken";
@@ -13,7 +13,7 @@ import { AuthService } from 'src/auth/auth.service';
 import db from '../db';
 
 
-
+import { checkModelExistsOnGroup } from 'src/composables/checkModelExists';
 
 import { Socket } from 'socket.io';
 import { Ollama } from 'ollama';
@@ -44,10 +44,12 @@ export class ChateventGateway {
     @MessageBody() data: {
       thread: number,
       message: any,
-      model: string
+      model: { modelFullName: string, thinkingLevel?: any },
+      idGroup: number
     },
     @ConnectedSocket() client: Socket,
   ) {
+
 
 
     const cookieHeader = client.handshake.headers.cookie ?? '';
@@ -149,31 +151,49 @@ export class ChateventGateway {
       return;
     }
 
-    // store messages as context
-    let messages: any[] = [data.message];
-
+    // Insert the new user message first so it's included in the context fetch below
     db.prepare('INSERT INTO message (data, idThread) VALUES (?, ?)').run(JSON.stringify(data.message), data.thread);
 
-    const context = db.prepare('SELECT * FROM message WHERE idThread = ? ORDER BY rowid DESC LIMIT 25').all(data.thread);
+    const context = db.prepare('SELECT * FROM message WHERE idThread = ? ORDER BY rowid ASC LIMIT 25').all(data.thread);
     const systemPrompt: any = db.prepare('SELECT * FROM message WHERE idThread = ? AND isSystem = 1').get(data.thread);
 
-    messages.push(JSON.parse(systemPrompt.data));
-    context.reverse().forEach((me: any) => {
+    // System prompt must be first; then conversation history in chronological order
+    let messages: any[] = [JSON.parse(systemPrompt.data)];
+    context.forEach((me: any) => {
         try {
-          messages.push(JSON.parse(me.data));
+          const parsed = JSON.parse(me.data);
+          // Exclude thinking and system messages — Ollama only understands system/user/assistant roles
+          if (parsed.role !== 'thinking') {
+            messages.push(parsed);
+          }
         } catch (e) {
             console.error(e)
         }
     })
 
+    const checkModelExists: any = checkModelExistsOnGroup(db, idUser, data.idGroup, data.model.modelFullName, data.model.thinkingLevel);
+    console.log("idGroup:", data.idGroup);
+    console.log("checkModelExists:", checkModelExists);
+
+    if (checkModelExists.length<=0) {
+      client.emit('error', { message: 'Model either not downloaded or permission denied' });
+      return;
+    }
+
     // create new ollama and make connection via env
     const ollamaClient = new Ollama({ host: this.ollamaURL });
 
     try {
+      const rawThinking = checkModelExists[0]?.thinkingLevel;
+      const think = rawThinking === 'true' ? true
+                  : rawThinking === 'false' ? false
+                  : rawThinking ?? false; // pass "high"/"medium"/"low" through as-is
+
       const stream = await ollamaClient.chat({
-        model: data.model,
+        model: data.model.modelFullName,
         messages: messages,
-        stream: true
+        stream: true,
+        think
       });
 
       if (!stream) {
@@ -183,9 +203,18 @@ export class ChateventGateway {
       }
 
       const allChunks: any[] = [];
+      const allThinkingChunks: any[] = [];
 
       // iterate over each chunk from ollamas streaming response
       for await (const chunk of stream) {
+
+        const thinking = (chunk as any)?.message?.thinking ?? (chunk as any)?.thinking;
+        if (thinking) {
+          client.emit('ai_thinking_chunk', thinking);
+          allThinkingChunks.push(thinking);
+        }
+
+
         const content = chunk.message.content; // get current chunk
         if (content) {
           client.emit('ai_chunk', content); // emit chunk to client
@@ -193,7 +222,15 @@ export class ChateventGateway {
         }
       }
 
+      console.log("Thinking message response:", allThinkingChunks);
+
       console.log("Message completed at thread with author, thread + author:", thread_author);
+
+      // Save thinking message to db (before the assistant response so rowid order is preserved)
+      if (allThinkingChunks.length > 0) {
+        const thinkingMessageResponse = { role: 'thinking', content: allThinkingChunks.join('') };
+        db.prepare("INSERT INTO message (data, idThread) VALUES (?, ?)").run(JSON.stringify(thinkingMessageResponse), data.thread);
+      }
 
       // structure message
       const messageResponse = { role: "assistant", content: allChunks.join('') };
@@ -201,7 +238,9 @@ export class ChateventGateway {
       // insert message into db
       db.prepare("INSERT INTO message (data, idThread) VALUES (?, ?)").run(JSON.stringify(messageResponse), data.thread);
 
+      client.emit('ai_thinking_complete');
       client.emit('ai_complete');
+
     } catch (err: any) {
       console.error("Ollama error:", err);
       client.emit('error', {

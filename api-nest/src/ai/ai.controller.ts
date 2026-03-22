@@ -65,15 +65,24 @@ export class AiController {
         @Session() session: Record<string, any>,
         @Query('modelName') modelName: string,
         @Query('modelFullName') modelFullName: string,
+        @Query('modelThinkingLevel') modelThinkingLevel: string,
         @Query('groupName') groupName: string,
         @Query('groupId') groupId: number,
     ): Observable<MessageEvent> {
         console.log("DEBUG: ADDING MODEL");
 
-        const model = { name: modelName, fullName: modelFullName };
+        const model = { name: modelName, fullName: modelFullName, thinkingLevel: modelThinkingLevel };
         const group = { name: groupName, idUserGroup: Number(groupId)};
 
         return this.aiService.addModel(model, group, session);
+    }
+
+    @Post('models/delete')
+    deleteModels(
+        @Session() session: Record<string, any>,
+        @Body('models') models: any
+    ) {
+        return this.aiService.deleteModels(models, session);
     }
 
     @Post('model/all')

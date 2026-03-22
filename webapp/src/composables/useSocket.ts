@@ -110,8 +110,8 @@ export async function connectSocket(): Promise<Socket | null> {
     return socket;
 }
 
-// sends prompt messages with the model name attached.
-export async function sendPrompt(thread: number, message: object, model: string): Promise<void> {
+// sends prompt messages with the model object attached.
+export async function sendPrompt(thread: number, message: object, model: { modelFullName: string, thinkingLevel?: any }, idGroup: number): Promise<void> {
     console.log("Sending prompt:", { thread, message, model });
     aiChunks.value = [];
 
@@ -121,7 +121,7 @@ export async function sendPrompt(thread: number, message: object, model: string)
 
     if (socket && socket.connected) {
         console.log("Emitting prompt on socket id:", socket.id);
-        socket.emit('prompt', { thread, message, model });
+        socket.emit('prompt', { thread, message, model, idGroup });
     } else {
         throw new Error('Socket not connected, call connectSocket() first');
     }

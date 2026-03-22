@@ -41,9 +41,21 @@ selectedThread.value={title:"",idThread:0};
 const storedModels = localStorage.getItem("models");
 const storedSelectedGroup = localStorage.getItem("selectedGroup");
 
+// set in Settings.vue
 const models:any = ref(storedModels ? JSON.parse(storedModels) : []);
 const groups = ref([]);
 const selectedGroup:any = ref(storedSelectedGroup ? JSON.parse(storedSelectedGroup): []);
+
+function normalizeModelsByGroup(rawModels: any[], group: any) {
+  const groupId = Number(group?.userGroup_idUserGroup);
+  return (rawModels ?? []).map((model: any) => ({
+    modelName: model.modelName,
+    modelFullName: model.modelFullName,
+    idGroup: Number(model.idGroup ?? model.idUserGroup ?? groupId),
+    idUserGroup: Number(model.idUserGroup ?? model.idGroup ?? groupId),
+    thinking: model.thinkingLevel ?? model.thinking ?? null
+  }));
+}
 
 
 // fetch all threads available to user
@@ -148,7 +160,7 @@ function updateModels(payload: any) {
   console.log("Updating modelsAvailable with:\n", payload);
 
   if( payload ) {
-    models.value=payload;
+    models.value = normalizeModelsByGroup(payload, selectedGroup.value);
   }
 
   if (models.value && models.value.length > 0) {
@@ -212,8 +224,9 @@ async function fetchModelsByGroup() {
         body: JSON.stringify(body)
     })
 
-    // set models
-    models.value = await res.json();
+    // set models with normalized group keys expected by chat websocket payload.
+    const rawModels = await res.json();
+    models.value = normalizeModelsByGroup(rawModels, selectedGroup.value);
     localStorage.setItem("models", JSON.stringify(models.value));
     localStorage.setItem("selectedGroup", JSON.stringify(selectedGroup.value));
 
@@ -256,8 +269,8 @@ const version = ref(pkg.build.productName+" "+pkg.version);
   width: 250px;
   height: fit-content;
   font-size: 20px;
-  background-color: hsla(0, 100%, 50%, .25);
-  color: hsla(0, 100%, 70%, 1);
+  background-color: var(--color-error-bg);
+  color: var(--color-error);
   text-align: center;
   margin: 0 auto;
   
@@ -278,8 +291,8 @@ const version = ref(pkg.build.productName+" "+pkg.version);
   width: 250px;
   height: fit-content;
   font-size: 20px;
-  background-color: hsla(60, 100%, 50%, .25);
-  color: hsla(60, 100%, 70%, 1);
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning);
   text-align: center;
   margin: 0 auto;
   
@@ -325,7 +338,7 @@ const version = ref(pkg.build.productName+" "+pkg.version);
   bottom: 0;
   padding: var(--space);
   background-color: transparent;
-  color: hsla(0, 0%, 100%, .4);
+  color: var(--text-faded);
   font-weight: 100;
   font-size: 16px;
   pointer-events: none;

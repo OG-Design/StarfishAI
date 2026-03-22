@@ -34,8 +34,8 @@ function handleOpenProfile() {
 
     display: flex;
 
-    padding: $space;
-    gap: $space;
+    padding: var(--space);
+    gap: var(--space);
 
     button {
         $size: 50px;
@@ -47,11 +47,11 @@ function handleOpenProfile() {
 }
 
 #settings-btn {
-    background-color: #8b5cf6;
+    background-color: var(--key-1);
 }
 
 #profile-btn {
-    background-color: #7c7cff;
+    background-color: var(--key-2-bright);
 }
 
 </style>

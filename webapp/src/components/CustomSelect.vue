@@ -111,11 +111,11 @@ watch(() => props.currentSelection, (newVal) => {
 
 
   background-color: transparent;
-  border: solid 1px hsla(237, 100%, 70%, .2);
-  border-radius: $border-radius;
+  border: solid 1px var(--border-1);
+  border-radius: var(--border-radius);
 
-  background-color: $bg-alpha-1;
-  color: $text-1;
+  background-color: var(--bg-alpha-1);
+  color: var(--text-1);
 
   backdrop-filter: blur(8px);
 
@@ -127,24 +127,27 @@ watch(() => props.currentSelection, (newVal) => {
 
   button {
 
-      width: 100%;
-      max-height: 32px;
+    width: 100%;
 
-      white-space: nowrap;
-      overflow-y: scroll;
-      scrollbar-width: none;
+    min-height: 36px;
 
-      border: none;
-      border-top: 1px solid;
-      border-bottom: 1px solid;
-      border-color: hsla(237, 100%, 100%, 0);
-      background-color: hsla(237, 100%, 100%, 0);
+    overflow-x: scroll;
+    overflow-y: hidden;
 
-      font-size: 24px;
-      &:hover {
-        border-color: var(--key-1);
-        background-color: hsla(237, 100%, 100%, .1);
-      }
+    white-space: nowrap;
+    scrollbar-width: none;
+
+    border: none;
+    border-top: 1px solid;
+    border-bottom: 1px solid;
+    border-color: transparent;
+    background-color: transparent;
+
+    font-size: 24px;
+    &:hover {
+      border-color: var(--key-1);
+      background-color: var(--bg-tinted);
+    }
   }
 
 }
@@ -161,11 +164,11 @@ watch(() => props.currentSelection, (newVal) => {
   scrollbar-width: none;
 
   background-color: transparent;
-  border: solid 1px hsla(237, 100%, 70%, .2);
-  border-radius: $border-radius;
+  border: solid 1px var(--border-1);
+  border-radius: var(--border-radius);
 
-  background-color: $bg-alpha-1;
-  color: $text-1;
+  background-color: var(--bg-alpha-1);
+  color: var(--text-1);
 
   backdrop-filter: blur(8px);
 

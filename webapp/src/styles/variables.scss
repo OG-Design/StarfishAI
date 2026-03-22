@@ -6,19 +6,65 @@ $shadow: 0px 0px 16px 0px rgba(0,0,0,.5);
 $border-radius: 1rem;
 
 
-$bg-1: #12141A;
-$bg-2: #171A21;
-$bg-ac-1: #1E2230;
-$bg-alpha-1: hsla(237, 100%, 70%, .05);
+$bg-1: #0e1018;
+$bg-2: #15182a;
+$bg-ac-1: #1c2238;
+$bg-alpha-1: hsla(237, 100%, 70%, .08);
 
 $key-1: #8B5CF6;
 $key-1-bright: hsl(258, 90%, 76%);
 $key-1-alpha: hsl(258, 90%, 66%, .5);
-$key-2: #646cff;
 $key-2: #646cff88;
+$key-2-solid: #646cff;
+$key-2-bright: #7c7cff;
+$key-2-alpha: hsla(240, 100%, 74%, .5);
 
-$text-1: rgba(255, 255, 255, 0.87);
+$text-1: #e8ecf5;
 $text-2: #fff;
+$text-muted: #888b94;
+$text-secondary: #A0A4B8;
+$text-faded: hsla(0, 0%, 100%, .4);
+
+$border-1: hsla(237, 100%, 70%, .2);
+$border-2: hsla(240, 100%, 74%, .4);
+$bg-alpha-2: hsla(237, 100%, 70%, .05);
+$bg-tinted: hsla(237, 100%, 100%, .1);
+
+// Thinking block
+$thinking-bg: hsla(237, 30%, 14%, 0.8);
+$thinking-border: hsla(237, 60%, 50%, 0.25);
+$thinking-border-open: hsla(237, 60%, 60%, 0.5);
+$thinking-border-hover: hsla(237, 60%, 70%, 0.6);
+$thinking-text: hsla(237, 60%, 75%, 0.8);
+$thinking-divider: hsla(237, 60%, 50%, 0.15);
+
+// Markdown content colors
+$md-text: #e8f4f8;
+$md-heading: #6ec9f0;
+$md-strong: #8ed4f5;
+$md-em: #b8e3f7;
+$md-link: #4fb3e8;
+$md-link-hover: #6ec9f0;
+$md-list-text: #d4ebf5;
+$md-list-item: #c5e0f0;
+$md-list-marker: #6ec9f0;
+$md-list-marker-nested: #5ab8e3;
+$md-blockquote-border: #4fb3e8;
+$md-blockquote-text: #b8e3f7;
+$md-table-bg: #1a3447;
+$md-table-header: #2d5a7b;
+$md-table-header-text: #6ec9f0;
+$md-table-border: #4fb3e8;
+$md-table-row-border: #2d5a7b;
+$md-table-row-hover: #223d52;
+$md-table-text: #d4ebf5;
+$md-hr: #2d5a7b;
+
+// Status colors
+$color-error: hsla(0, 100%, 70%, 1);
+$color-error-bg: hsla(0, 100%, 50%, .25);
+$color-warning: hsla(60, 100%, 70%, 1);
+$color-warning-bg: hsla(60, 100%, 50%, .25);
 
 $font-size-1: 36px;
 $font-size-2: 28px;
@@ -44,9 +90,53 @@ $top-menu-height: 75px;
     --key-1-bright: #{$key-1-bright};
     --key-1-alpha: #{$key-1-alpha};
     --key-2: #{$key-2};
+    --key-2-solid: #{$key-2-solid};
+    --key-2-bright: #{$key-2-bright};
+    --key-2-alpha: #{$key-2-alpha};
 
     --text-1: #{$text-1};
     --text-2: #{$text-2};
+    --text-muted: #{$text-muted};
+    --text-secondary: #{$text-secondary};
+    --text-faded: #{$text-faded};
+
+    --border-1: #{$border-1};
+    --border-2: #{$border-2};
+    --bg-alpha-2: #{$bg-alpha-2};
+    --bg-tinted: #{$bg-tinted};
+
+    --thinking-bg: #{$thinking-bg};
+    --thinking-border: #{$thinking-border};
+    --thinking-border-open: #{$thinking-border-open};
+    --thinking-border-hover: #{$thinking-border-hover};
+    --thinking-text: #{$thinking-text};
+    --thinking-divider: #{$thinking-divider};
+
+    --md-text: #{$md-text};
+    --md-heading: #{$md-heading};
+    --md-strong: #{$md-strong};
+    --md-em: #{$md-em};
+    --md-link: #{$md-link};
+    --md-link-hover: #{$md-link-hover};
+    --md-list-text: #{$md-list-text};
+    --md-list-item: #{$md-list-item};
+    --md-list-marker: #{$md-list-marker};
+    --md-list-marker-nested: #{$md-list-marker-nested};
+    --md-blockquote-border: #{$md-blockquote-border};
+    --md-blockquote-text: #{$md-blockquote-text};
+    --md-table-bg: #{$md-table-bg};
+    --md-table-header: #{$md-table-header};
+    --md-table-header-text: #{$md-table-header-text};
+    --md-table-border: #{$md-table-border};
+    --md-table-row-border: #{$md-table-row-border};
+    --md-table-row-hover: #{$md-table-row-hover};
+    --md-table-text: #{$md-table-text};
+    --md-hr: #{$md-hr};
+
+    --color-error: #{$color-error};
+    --color-error-bg: #{$color-error-bg};
+    --color-warning: #{$color-warning};
+    --color-warning-bg: #{$color-warning-bg};
 
     --font-size-1: #{$font-size-1};
     --font-size-2: #{$font-size-2};
@@ -61,5 +151,76 @@ $top-menu-height: 75px;
         --space: .5rem;
         --space-1: .2rem;
         --space-2: .1rem;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        // Backgrounds — bright, purple-tinted whites
+        --bg-1: #f0eff8;
+        --bg-2: #e6e4f5;
+        --bg-ac-1: #d8d5ee;
+        --bg-alpha-1: hsla(237, 60%, 40%, .07);
+        --bg-alpha-2: hsla(237, 60%, 40%, .05);
+        --bg-tinted: hsla(237, 60%, 35%, .1);
+
+        // Keys — darkened slightly for contrast on light bg
+        --key-1: #6d28d9;
+        --key-1-bright: hsl(258, 88%, 55%);
+        --key-1-alpha: hsla(258, 88%, 50%, .35);
+        --key-2: #3838c888;
+        --key-2-solid: #3838c8;
+        --key-2-bright: #4a4adc;
+        --key-2-alpha: hsla(240, 80%, 58%, .35);
+
+        // Text — dark purples on light
+        --text-1: #1c1a2e;
+        --text-2: #0a0818;
+        --text-muted: #5e5c78;
+        --text-secondary: #4a4870;
+        --text-faded: hsla(237, 20%, 10%, .35);
+
+        // Borders — visible on light bg
+        --border-1: hsla(237, 60%, 45%, .28);
+        --border-2: hsla(240, 60%, 50%, .38);
+
+        // Shadow — subtle on light
+        --shadow: 0px 0px 16px 0px rgba(0, 0, 0, .12);
+
+        // Thinking block
+        --thinking-bg: hsla(237, 40%, 93%, 0.92);
+        --thinking-border: hsla(237, 60%, 55%, 0.28);
+        --thinking-border-open: hsla(237, 60%, 52%, 0.48);
+        --thinking-border-hover: hsla(237, 60%, 48%, 0.58);
+        --thinking-text: hsla(237, 60%, 28%, 0.9);
+        --thinking-divider: hsla(237, 60%, 55%, 0.2);
+
+        // Markdown content — dark blues for readability on light bg
+        --md-text: #1a2535;
+        --md-heading: #1060a8;
+        --md-strong: #0c4a88;
+        --md-em: #1a4a80;
+        --md-link: #1060a8;
+        --md-link-hover: #0a4898;
+        --md-list-text: #1a2535;
+        --md-list-item: #1e2d3e;
+        --md-list-marker: #1060a8;
+        --md-list-marker-nested: #1872b5;
+        --md-blockquote-border: #1a6ab0;
+        --md-blockquote-text: #1a3a5a;
+        --md-table-bg: #d8eaf5;
+        --md-table-header: #b8d5ec;
+        --md-table-header-text: #0c5098;
+        --md-table-border: #4898cc;
+        --md-table-row-border: #bcd2e8;
+        --md-table-row-hover: #cce0f2;
+        --md-table-text: #1a2535;
+        --md-hr: #a8c5e0;
+
+        // Status — adjusted for light bg
+        --color-error: hsla(0, 80%, 38%, 1);
+        --color-error-bg: hsla(0, 90%, 52%, .15);
+        --color-warning: hsla(42, 80%, 32%, 1);
+        --color-warning-bg: hsla(50, 90%, 52%, .15);
     }
 }

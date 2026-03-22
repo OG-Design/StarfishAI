@@ -12,6 +12,9 @@ import { ConfigService } from '@nestjs/config';
 
 import db from '../db';
 import { Observable } from 'rxjs';
+import { getUserGroupPermissions } from 'src/composables/getUserModelPermissions';
+import { checkModelExistsOnGroup, checkModelExistsOnAll } from 'src/composables/checkModelExists';
+import { Session } from 'inspector';
 
 function parseJsonFromString(str: string): any | null {
     const match = str.match(/{[\s\S]*}/);
@@ -209,13 +212,14 @@ export class AiService {
 
     // Download AI model ollama
     addModel(
-        model: {name: string, fullName: string},
+        model: {name: string, fullName: string, thinkingLevel: string},
         group: {name: string, idUserGroup?: number},
         session: any
     ): Observable<MessageEvent> {
         const idUser = session.user.idUser;
         const modelName = model.name;
         const modelFullName = model.fullName;
+        const modelThinkingLevel = model.thinkingLevel;
         const idGroup = group.idUserGroup;
         const groupName = group.name;
 
@@ -227,17 +231,7 @@ export class AiService {
                     console.log("Starting async logic...")
 
 
-                    const checkUserPermission: any = db.prepare(`
-                        SELECT 
-                        -- groupMembers
-                        groupMember.idGroupMember, groupMember.user_idUser, groupMember.permissionLevel AS groupMemberPermissionLevel,
-                        -- userGroup
-                        userGroup.idUserGroup, userGroup.name AS groupName, userGroup.permissionLevel AS userGroupPermissionLevel
-                        FROM groupMember
-                        INNER JOIN userGroup
-                        ON userGroup.idUserGroup = groupMember.userGroup_idUserGroup
-                        WHERE groupMember.user_idUser = ? AND userGroup.idUserGroup = ?
-                    `).all(idUser, idGroup);
+                    const checkUserPermission: any = getUserGroupPermissions(db, idUser, idGroup);
 
                     console.log("DEBUG: addModel permission check");
                     console.log("idUser:", idUser);
@@ -247,7 +241,7 @@ export class AiService {
                         console.log("groupMemberPermissionLevel:", checkUserPermission[0].groupMemberPermissionLevel);
                     }
 
-                    // check if user has admin privileges 
+                    // check if user has admin privileges
                     if (checkUserPermission.length==0 || checkUserPermission[0].groupMemberPermissionLevel != "admin") {
                         console.error("Permission denied");
                         observer.error(new UnauthorizedException("A user with id: " + idUser + " tried to access a group they don't administrator privileges in. group id: " + idGroup));
@@ -256,39 +250,13 @@ export class AiService {
 
 
                     console.log("Trying to add a model, checking if it already exists on group", groupName);
-                    const checkModelExists = db.prepare(`
-                        SELECT
-                        -- groupMembers
-                        groupMember.idGroupMember, username,
-                        -- model
-                        model.name AS modelName, model.fullName AS modelFullName,
-                        -- userGroup
-                        userGroup.idUserGroup, userGroup.name AS groupName
-                        FROM groupMember
-                        INNER JOIN userGroup
-                        ON userGroup.idUserGroup = groupMember.userGroup_idUserGroup
-                        INNER JOIN model
-                        ON model.userGroup_idUserGroup = userGroup.idUserGroup
-                        INNER JOIN user
-                        ON user.idUser = groupMember.user_idUser
+                    const checkModelExistsOnGroupVar: any = checkModelExistsOnGroup(db, idUser, idGroup, modelFullName);
 
-                        /* By user */
-                        WHERE idUser = ?
-
-                        /* By group */
-                        AND idUserGroup = ?
-
-                        /* By modelName */
-                        AND model.fullName = ?
-                    `).all(idUser, idGroup, modelFullName);
-
-                    
-
-                    console.log("Table: checkModelExists");
-                    console.table(checkModelExists);
+                    console.log("Table: checkModelExistsOnGroup");
+                    console.table(checkModelExistsOnGroupVar);
 
                     // check if model exists in db
-                    if (checkModelExists.length!=0) {
+                    if (checkModelExistsOnGroupVar.length!=0 && checkModelExistsOnGroupVar[0]?.thinkingLevel === modelThinkingLevel) {
                         console.log("Model already exists!");
                         observer.error(new ConflictException("Model " + modelFullName + " already exists on group: " + groupName));
                         return;
@@ -310,8 +278,8 @@ export class AiService {
                     for await (const event of model as AsyncIterable<any>) {
                         console.log("Pull event:", event);
                         lastStatus= event?.status ?? lastStatus;
-                        
-                        
+
+
                         if (event?.total) {
                             totalBytes = event.total;
                         }
@@ -342,8 +310,8 @@ export class AiService {
                     }
 
                     db.prepare(`
-                    INSERT INTO model (name, fullname, userGroup_idUserGroup) VALUES (?, ?, ?)
-                    `).run(modelName, modelFullName, idGroup);
+                    INSERT INTO model (name, fullName, userGroup_idUserGroup, thinkingLevel) VALUES (?, ?, ?, ?)
+                    `).run(modelName, modelFullName, idGroup, modelThinkingLevel);
 
                     console.log("Model added", modelFullName, "on group", groupName);
                     
@@ -360,7 +328,60 @@ export class AiService {
 
     }
 
-    // get models available to user by group 
+    async deleteModel(idUser: number, idGroup: number | undefined, modelFullName: string, thinkingLevel: string) {
+        console.log("Trying to delete model:", modelFullName, "with thinking a level of:", thinkingLevel);
+        try {
+            // returns userGroup and it's permission level
+            const checkUserPermission = getUserGroupPermissions(db, idUser, idGroup);
+
+            if (!checkUserPermission.length || checkUserPermission[0].groupMemberPermissionLevel !== 'admin') {
+                return new UnauthorizedException('You do not have administrator access to this group');
+            }
+
+            // get all cases of provided model in this group
+            const thinkingClause = thinkingLevel == null
+                ? 'thinkingLevel IS NULL'
+                : 'thinkingLevel = ?';
+            const thinkingArgs = thinkingLevel == null ? [] : [thinkingLevel];
+
+            const models = db.prepare(`
+                SELECT fullName, thinkingLevel, userGroup_idUserGroup FROM model WHERE fullName = ? AND ${thinkingClause}
+            `).all(modelFullName, ...thinkingArgs);
+
+            console.log("Models to delete:", models);
+
+            if (models.length === 0) {
+                return { message: 'Model not found' };
+            }
+
+            db.prepare(`
+                DELETE FROM model WHERE fullName = ? AND ${thinkingClause} AND userGroup_idUserGroup = ?
+            `).run(modelFullName, ...thinkingArgs, idGroup);
+
+            // Only delete from Ollama if no other group still references this model
+            const remainingRefs = db.prepare(`
+                SELECT 1 FROM model WHERE fullName = ? LIMIT 1
+            `).get(modelFullName);
+
+            if (!remainingRefs) {
+                await this.ollamaClient.delete({ model: modelFullName });
+                console.log("Deleted model from Ollama:", modelFullName);
+            }
+
+            return {message: 'Model deleted'};
+
+        } catch (err) {
+            console.error("deleteModel error:", err);
+            throw err;
+        }
+    }
+    async deleteModels(models: any[], session: any) {
+        for (const model of models) {
+            await this.deleteModel(session.user.idUser, model.idGroup, model.modelFullName, model.thinking);
+        }
+    }
+
+    // get models available to user by group
     async getModelsByGroup(
     group: {
         name: string,
@@ -378,7 +399,7 @@ SELECT
 idGroupMember, 
 userGroup.name, 
 userGroup.permissionLevel, 
-username, 
+username,
 userGroup_idUserGroup 
 FROM groupMember
 INNER JOIN userGroup -- join userGroup's (the permission level groups)
@@ -404,7 +425,7 @@ AND idUserGroup = ?
 -- groupMembers
 groupMember.idGroupMember, groupMember.user_idUser, username,
 -- model
-model.name AS modelName, model.fullName AS modelFullName,
+model.name AS modelName, model.fullName AS modelFullName, model.thinkingLevel as thinkingLevel,
 -- userGroup
 userGroup.idUserGroup, userGroup.name AS groupName
 FROM groupMember
@@ -426,7 +447,7 @@ AND idUserGroup = ?
         console.log(modelsByGroup);
 
         return modelsByGroup;
-    
+
     }
 
 }

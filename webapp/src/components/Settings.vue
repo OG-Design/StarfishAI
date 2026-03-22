@@ -58,6 +58,7 @@ const selectedGroupReType = computed(() => ({
 }))
 const addName = ref("");
 const addFullName = ref("");
+const addThinking = ref({ key: 'Off', value: 'false' });
 const responseAddModel = ref("");
 const editMode_models = ref(false);
 const selectedModels = ref([]);
@@ -71,12 +72,18 @@ const ollamaConfigsReType = computed(() =>
     }))
 );
 
+function handleThinkingChange(selected) {
+    addThinking.value=selected;
+}
+
 const selectedConfig = ref("");
 const selectedConfigReType = computed(() => ({
     key: selectedConfig.value ?? '',
     value: selectedConfig.value ?? ''
 }))
+
 const systemServices = ref([]);
+
 
 import { watch } from 'vue';
 watch(selectedGroup, (newVal) => {
@@ -125,10 +132,25 @@ async function fetchModelsByGroup() {
         body: JSON.stringify(body)
     })
 
-    models.value = await res.json();
+    const data = await res.json();
+    console.log(data);
+
+    const mappedData = data.map((model) => {
+        const mapModel = {
+            modelName: model.modelName,
+            modelFullName: model.modelFullName,
+            thinking: model.thinkingLevel,
+            idGroup: selectedGroupId.value
+        };
+        return mapModel;
+    })
+
+    models.value = mappedData;
+
+
 
     // debug
-    console.log("In Settings: models: \n", await models.value);
+    console.log("In Settings: models: \n", models.value);
 
     emit("updateModels", models.value); // emit to parent to pass from parent to OpenThread, this allows the list of models to be displayed
 }
@@ -144,12 +166,13 @@ async function addModelToGroup() {
     const params = new URLSearchParams({
             modelName: addName.value,
             modelFullName: addFullName.value,
+            modelThinkingLevel: addThinking.value.value,
             groupName: selectedGroup.value.name,
             groupId: selectedGroup.value.userGroup_idUserGroup
     });
 
     console.log("addModelToGroup, Body: \n", params);
-    
+
     try {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', `${apiBase.value}/api/ai/model/add?${params.toString()}`, true);
@@ -258,8 +281,27 @@ function toggleEditMode() {
     editMode_models.value = !editMode_models.value;
 }
 
-function deleteSelectedModels() {
+async function deleteSelectedModels() {
+
+
+
+    const body = {
+        models: selectedModels.value
+    }
+
+    console.log("Trying to delete models:", selectedModels.value)
+
+
+    const res = await apiFetch("/api/ai/models/delete", {
+        method: 'POST',
+        headers: {
+            'Content-Type':'application/json'
+        },
+        body: JSON.stringify(body)
+    })
+
     console.log("Deleting models: \n", selectedModels.value);
+
 }
 
 async function checkSystemServices() {
@@ -315,6 +357,7 @@ onMounted(async () => {
                             <tr>
                                 <th>Display Name</th>
                                 <th>Model Name</th>
+                                <th>Thinking Level</th>
                                 <th v-if="!editMode_models">Status</th>
                                 <th v-if="editMode_models"><button @click="deleteSelectedModels">Delete</button></th>
                                 <th><button @click="toggleEditMode">...</button></th>
@@ -324,16 +367,19 @@ onMounted(async () => {
                             <tr v-if="!editMode_models" v-for="(model, index) in models" :key="index">
                                 <td data-label="Display Name">{{ model.modelName }}</td>
                                 <td data-label="Model Name">{{ model.modelFullName }}</td>
+                                <td data-label="Thinking">{{ model.thinking }}</td>
                                 <td data-label="Status"><div class="status-ready"></div></td>
                             </tr>
                             <tr v-if="editMode_models" v-for="(model, index) in models" :key="index">
                                 <td data-label="Display Name">{{ model.modelName }}</td>
                                 <td data-label="Model Name">{{ model.modelFullName }}</td>
+                                <td data-label="Thinking">{{ model.thinking }}</td>
                                 <td data-label="Select"><input type="checkbox" v-model="selectedModels" :value="model" :key="index"></td>
                             </tr>
                             <tr>
                                 <td data-label="Display Name"><input type="text" name="" id="modelName" placeholder="name" v-model="addName"></td>
                                 <td data-label="Model Name"><input type="text" name="" id="modelFullName" placeholder="fullname" v-model="addFullName"></td>
+                                <td data-label="Model Thinking Level"><CustomSelect :values="[{key: 'Regular Thinking', value: 'true'},{key: 'Off', value: 'false'},{key: 'Low Thinking', value: 'low'},{key: 'Medium Thinking', value: 'medium'},{key: 'High Thinking', value: 'high'}]" :current-selection="addThinking" :update-handler="handleThinkingChange" direction="down"/></td>
                                 <td data-label="Add"><button type="button" @click="addModelToGroup">Add</button></td>
                                 <td data-label="Progress">
                                     <div v-if="isLoading" class="loading-gif-container-settings"><img class="loading-gif-settings" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""><span>{{ downloadPercentage }}%</span></div>
@@ -413,9 +459,9 @@ h1 {
     position: absolute;
     z-index: 101;
 
-    padding: calc($settings-space * 10);
-    padding-left: calc($settings-space * 25);
-    padding-right: calc($settings-space * 25);
+    padding: calc(var(--settings-space) * 10);
+    padding-left: calc(var(--settings-space) * 25);
+    padding-right: calc(var(--settings-space) * 25);
 
     box-sizing: border-box;
 
@@ -430,29 +476,29 @@ h1 {
 
     height: fit-content;
 
-    background-color: $bg-1;
+    background-color: var(--bg-1);
 
-    border-radius: $border-radius;
-    border: 1px solid $key-1;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--key-1);
 
     offset: 0;
     list-style: none;
     li {
 
-        width: calc(100% - $settings-space * 2);
+        width: calc(100% - var(--settings-space) * 2);
         display: flex;
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
 
-        padding: $settings-space;
+        padding: var(--settings-space);
         box-sizing: border-box;
 
-        gap: $settings-space;
+        gap: var(--settings-space);
 
-        border-radius: $border-radius;
+        border-radius: var(--border-radius);
 
-        background-color: $bg-1;
+        background-color: var(--bg-1);
     }
     #settings-header {
         background: transparent;
@@ -470,8 +516,8 @@ h1 {
         flex-direction: row;
         justify-content: flex-start;
         align-items: stretch;
-        gap: $settings-space;
-        border-radius: $border-radius;
+        gap: var(--settings-space);
+        border-radius: var(--border-radius);
     }
 
     select {
@@ -479,8 +525,8 @@ h1 {
         height: fit-content;
 
         font-size: 18px;
-        border-radius: $border-radius;
-        border: 1px solid $key-1;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--key-1);
     }
 }
 
@@ -491,9 +537,9 @@ h1 {
     align-items: center;
     width: clamp(200px, 50%, 300px);
     height: fit-content;
-    background-color: $bg-ac-1;
-    border-radius: $border-radius;
-    padding: $space;
+    background-color: var(--bg-ac-1);
+    border-radius: var(--border-radius);
+    padding: var(--space);
 
     h3 {
         align-self: flex-start;
@@ -510,9 +556,9 @@ h1 {
     justify-content: center;
     align-items: center;
     width: clamp(200px, 50%, 300px);
-    background-color: $bg-ac-1;
-    border-radius: $border-radius;
-    padding: $space;
+    background-color: var(--bg-ac-1);
+    border-radius: var(--border-radius);
+    padding: var(--space);
 
     h3 {
         align-self: flex-start;
@@ -541,12 +587,12 @@ h1 {
     min-width: 0;
     display: table;
     height: fit-content;
-    background-color: $bg-ac-1;
-    border-radius: $border-radius;
-    padding: $settings-space;
+    background-color: var(--bg-ac-1);
+    border-radius: var(--border-radius);
+    padding: var(--settings-space);
 
     border-collapse: separate;
-    border-spacing: $settings-space calc($settings-space / 2);
+    border-spacing: var(--settings-space) calc(var(--settings-space) / 2);
 
     tbody {
         tr {
@@ -558,11 +604,11 @@ h1 {
 }
 
 input {
-    color: $text-2;
-    background-color: $bg-ac-1;
-    border: 1px solid $key-1;
-    border-radius: $border-radius;
-    padding: $space-1;
+    color: var(--text-2);
+    background-color: var(--bg-ac-1);
+    border: 1px solid var(--key-1);
+    border-radius: var(--border-radius);
+    padding: var(--space-1);
 }
 
 .status-ready {
@@ -601,7 +647,7 @@ button {
     background-color: transparent;
     background: transparent;
     border: none;
-    color: $text-2;
+    color: var(--text-2);
 
 }
 
@@ -636,7 +682,7 @@ $scale-gif:50px;
             flex-direction: column;
             justify-content: space-between;
             align-items: center;
-            gap: calc($settings-space / 2);
+            gap: calc(var(--settings-space) / 2);
             overflow: scroll;
         }
         .tile-row {
@@ -648,12 +694,12 @@ $scale-gif:50px;
         .table {
             width: 100%;
             height: fit-content;
-            background-color: $bg-ac-1;
-            border-radius: $border-radius;
-            padding: $settings-space;
+            background-color: var(--bg-ac-1);
+            border-radius: var(--border-radius);
+            padding: var(--settings-space);
 
             border-collapse: separate;
-            border-spacing: $settings-space calc($settings-space / 2);
+            border-spacing: var(--settings-space) calc(var(--settings-space) / 2);
 
             tbody {
                 tr {
@@ -669,13 +715,13 @@ $scale-gif:50px;
 @media (max-width: 600px) {
     .flex-row {
         flex-direction: column;
-        gap: calc($settings-space / 2);
+        gap: calc(var(--settings-space) / 2);
     }
 
     .table {
         display: block;
-        padding: calc($settings-space / 2);
-        border-radius: $border-radius;
+        padding: calc(var(--settings-space) / 2);
+        border-radius: var(--border-radius);
     }
 
     .table thead {
@@ -684,23 +730,23 @@ $scale-gif:50px;
 
     .table tbody tr {
         display: block;
-        margin-bottom: $settings-space;
-        padding-bottom: $settings-space;
-        border-bottom: 1px solid $key-1;
+        margin-bottom: var(--settings-space);
+        padding-bottom: var(--settings-space);
+        border-bottom: 1px solid var(--key-1);
     }
 
     .table tbody td {
         display: flex;
         justify-content: space-between;
-        padding: calc($space / 4) 0;
+        padding: calc(var(--space) / 4) 0;
         align-items: center;
     }
 
     .table tbody td:before {
         content: attr(data-label);
         font-weight: 600;
-        color: $text-2;
-        margin-right: $space-1;
+        color: var(--text-2);
+        margin-right: var(--space-1);
         flex: 1;
         text-align: left;
     }
