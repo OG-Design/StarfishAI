@@ -1,12 +1,39 @@
 <script setup lang="ts">
 
+
 import {ref, onMounted, computed, watch, nextTick} from 'vue';
 
 import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
-import 'highlight.js/styles/atom-one-dark.css';
-// Light theme override for highlight.js
-import '../styles/atom-one-light.css';
+
+
+// Dynamically load highlight.js theme based on system color scheme
+onMounted(() => {
+  const setHighlightTheme = (isDark: boolean) => {
+    // Remove any existing theme
+    const existingDark = document.getElementById('hljs-dark');
+    const existingLight = document.getElementById('hljs-light');
+    if (existingDark) existingDark.remove();
+    if (existingLight) existingLight.remove();
+    // Add the correct theme
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    if (isDark) {
+      link.href = 'https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.css';
+      link.id = 'hljs-dark';
+    } else {
+      link.href = '/styles/atom-one-light.css';
+      link.id = 'hljs-light';
+    }
+    document.head.appendChild(link);
+  };
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    const darkMedia = window.matchMedia('(prefers-color-scheme: dark)');
+    setHighlightTheme(darkMedia.matches);
+    darkMedia.addEventListener('change', (e) => setHighlightTheme(e.matches));
+  }
+});
 
 import { sendPrompt, aiChunks, socket, connectSocket } from '../composables/useSocket';
 
