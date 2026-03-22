@@ -52,7 +52,8 @@ function normalizeModelsByGroup(rawModels: any[], group: any) {
     modelName: model.modelName,
     modelFullName: model.modelFullName,
     idGroup: Number(model.idGroup ?? model.idUserGroup ?? groupId),
-    idUserGroup: Number(model.idUserGroup ?? model.idGroup ?? groupId)
+    idUserGroup: Number(model.idUserGroup ?? model.idGroup ?? groupId),
+    thinking: model.thinkingLevel ?? model.thinking ?? null
   }));
 }
 
@@ -268,8 +269,8 @@ const version = ref(pkg.build.productName+" "+pkg.version);
   width: 250px;
   height: fit-content;
   font-size: 20px;
-  background-color: hsla(0, 100%, 50%, .25);
-  color: hsla(0, 100%, 70%, 1);
+  background-color: var(--color-error-bg);
+  color: var(--color-error);
   text-align: center;
   margin: 0 auto;
   
@@ -290,8 +291,8 @@ const version = ref(pkg.build.productName+" "+pkg.version);
   width: 250px;
   height: fit-content;
   font-size: 20px;
-  background-color: hsla(60, 100%, 50%, .25);
-  color: hsla(60, 100%, 70%, 1);
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning);
   text-align: center;
   margin: 0 auto;
   
@@ -337,7 +338,7 @@ const version = ref(pkg.build.productName+" "+pkg.version);
   bottom: 0;
   padding: var(--space);
   background-color: transparent;
-  color: hsla(0, 0%, 100%, .4);
+  color: var(--text-faded);
   font-weight: 100;
   font-size: 16px;
   pointer-events: none;

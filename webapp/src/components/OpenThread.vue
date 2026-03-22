@@ -3,12 +3,25 @@
 import {ref, onMounted, computed, watch, nextTick} from 'vue';
 
 import MarkdownIt from 'markdown-it';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/atom-one-dark.css';
+// Light theme override for highlight.js
+import '../styles/atom-one-light.css';
 
 import { sendPrompt, aiChunks, socket, connectSocket } from '../composables/useSocket';
 
 import CustomSelect from './CustomSelect.vue';
 import { type CustomSelectType } from '../types/CustomSelectType';
-const md = new MarkdownIt();
+const md: any = new MarkdownIt({
+  highlight(code, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return `<pre class="hljs"><code>${hljs.highlight(code, { language: lang, ignoreIllegals: true }).value}</code></pre>`;
+      } catch {}
+    }
+    return `<pre class="hljs"><code>${md.utils.escapeHtml(code)}</code></pre>`;
+  }
+});
 
 const props = defineProps<{title: string, index: number, idThread: number, models: any[]}>();
 
@@ -24,16 +37,28 @@ const assetBase = isElectron ? './animation/' : '/animation';
 const threadTitle = ref(props.title);
 const models = ref<ModelOption[]>(props.models as ModelOption[]);
 
+// Composite key: idGroup + modelFullName + thinkingLevel so models with the same
+// modelFullName but different thinking settings are always distinct.
+const modelKey = (m: ModelOption) => `${(m as any).idGroup}_${m.modelFullName}_${(m as any).thinking ?? ''}`;
+
+// Display label — append a thinking indicator when the model has thinking enabled.
+function modelDisplayName(m: ModelOption): string {
+  const thinking = (m as any).thinking;
+  if (!thinking || thinking === 'false' || thinking === false) return m.modelName;
+  const label = thinking === 'true' || thinking === true ? 'Thinking' : `Thinking (${thinking})`;
+  return `${m.modelName} [${label}]`;
+}
+
 const modelsReType = ref<CustomSelectType[]>(
   models.value.map(model => ({
-    key: model.modelName,
-    value: model.modelFullName
+    key: modelDisplayName(model),
+    value: modelKey(model)
   }))
 );
 
 const currentModelReType = computed<CustomSelectType>(() => ({
-  key: currentModel.value?.modelName ?? '',
-  value: currentModel.value?.modelFullName ?? ''
+  key: currentModel.value ? modelDisplayName(currentModel.value) : '',
+  value: currentModel.value ? modelKey(currentModel.value) : ''
 }));
 
 const currentModel = ref<ModelOption | null>(models.value[0] ?? null);
@@ -102,7 +127,14 @@ async function getAllMessages() {
 
   console.log(data);
 
-  messages.value = data;
+  // Find the last thinking message so it starts open by default
+  let lastThinkingIdx = -1;
+  for (let i = data.length - 1; i >= 0; i--) {
+    if (data[i].role === 'thinking') { lastThinkingIdx = i; break; }
+  }
+  messages.value = data.map((m: any, i: number) =>
+    m.role === 'thinking' ? { ...m, _open: i === lastThinkingIdx } : m
+  );
 
   const systemMessage = data.find((msg: any) => {
     return msg.role==='system'
@@ -174,15 +206,39 @@ async function handlePrompt() {
   // Debug log to verify messages
   console.log("Messages after sending prompt:", messages.value);
 
+  // Create a placeholder for the thinking content (inserted into the list only when the first chunk arrives)
+  let thinkingMessage: any = null;
+
   // Create a placeholder for the assistant's message
   let assistantMessage = { role: 'assistant', content: '', complete: false };
   messages.value.push(assistantMessage);
 
   const cleanupListeners = () => {
     socket?.off('ai_chunk', handleChunk);
+    socket?.off('ai_thinking_chunk', handleThinkingChunk);
+    socket?.off('ai_thinking_complete', handleThinkingComplete);
     socket?.off('ai_complete', handleComplete);
     socket?.off('error', handleError);
     socket?.off('connect_error', handleConnectError);
+  };
+
+  // Handle thinking stream chunks — insert a thinking placeholder before the assistant message on first chunk
+  const handleThinkingChunk = (chunk: string) => {
+    if (!thinkingMessage) {
+      thinkingMessage = { role: 'thinking', content: '', complete: false, _open: true };
+      const assistantIdx = messages.value.indexOf(assistantMessage);
+      messages.value.splice(assistantIdx, 0, thinkingMessage);
+    }
+    thinkingMessage.content += chunk;
+    messages.value = [...messages.value];
+    scrollToBottom();
+  };
+
+  const handleThinkingComplete = () => {
+    if (thinkingMessage) {
+      thinkingMessage.complete = true;
+      messages.value = [...messages.value];
+    }
   };
 
   // Handle WebSocket events
@@ -230,6 +286,8 @@ async function handlePrompt() {
 
     // Set up WebSocket listeners before emitting prompt to avoid missing fast error responses.
     socket.on('ai_chunk', handleChunk);
+    socket.on('ai_thinking_chunk', handleThinkingChunk);
+    socket.once('ai_thinking_complete', handleThinkingComplete);
     socket.once('ai_complete', handleComplete);
     socket.once('error', handleError);
     socket.once('connect_error', handleConnectError);
@@ -241,7 +299,7 @@ async function handlePrompt() {
     if (!idGroup) {
       throw new Error('Model group id is missing. Re-select the model in Settings.');
     }
-    await sendPrompt(props.idThread, message, currentModel.value.modelFullName, idGroup); // model: llama3 llama3.2 smollm2:135m dolphin-phi
+    await sendPrompt(props.idThread, message, { modelFullName: currentModel.value.modelFullName, thinkingLevel: (currentModel.value as any).thinking }, idGroup);
   } catch (err: any) {
     console.error('Failed to send prompt:', err);
     isLoading.value = false;
@@ -316,9 +374,14 @@ watch([messages, currentMessage], () => {
 console.log(props.models)
 console.log("Models: \n", models);
 
+// Toggle a thinking block open/closed
+function toggleThinking(message: any) {
+  message._open = !message._open;
+}
+
 // store the selected model in localStorage to keep for reload and other threads.
 function handleUpdateSelectedModel(selected: CustomSelectType) {
-  const found = models.value.find(m => m.modelFullName === selected.value);
+  const found = models.value.find(m => modelKey(m) === selected.value);
   if (found) {
     currentModel.value = found;
     localStorage.setItem("selectedModel", JSON.stringify(found));
@@ -351,14 +414,33 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
       </template>
 
       <!-- Prints all previous messages -->
-      <li
-        class="message markdown-content"
-        :class="{'message-user': message.role === 'user'} /* If role = user add class message-user */ "
-        :style="{display: message.role === 'system' ? 'none' : 'block' /* Hide system messages */}"
-        v-for="(message, index) in messages /* For loop to render each message */"
-        :key="index"
-        v-html="md.render(message.content ?? '') /* render the message's content in markdown */ "
-      ></li>
+      <template v-for="(message, index) in messages" :key="index">
+
+        <!-- Thinking block: collapsible, open while streaming or if it is the latest thinking message -->
+        <li v-if="message.role === 'thinking'" class="thinking-block">
+          <div class="thinking-details" :class="{ open: message._open }">
+            <div class="thinking-summary" role="button" @click="toggleThinking(message)">
+              <span>Thinking</span>
+              <span v-if="message.complete === false" class="thinking-indicator">...</span>
+            </div>
+            <div class="thinking-content-wrapper">
+              <div class="thinking-content markdown-content" v-html="md.render(message.content ?? '')"></div>
+            </div>
+          </div>
+        </li>
+
+        <!-- System message (hidden) -->
+        <li v-else-if="message.role === 'system'" style="display:none"></li>
+
+        <!-- User / assistant messages -->
+        <li
+          v-else
+          class="message markdown-content"
+          :class="{'message-user': message.role === 'user'}"
+          v-html="md.render(message.content ?? '')"
+        ></li>
+
+      </template>
 
       <!-- removed to prevent duplicating latest message after changes, remove completely after testing! -->
       <!-- Prints the latest message -->
@@ -370,7 +452,7 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
     <div v-else class="loading-gif-container"></div>
 
     <div id="model-selector">
-    <CustomSelect :values="modelsReType" :currentSelection="currentModelReType" :updateHandler="handleUpdateSelectedModel" />
+    <CustomSelect :values="modelsReType" :currentSelection="currentModelReType" :updateHandler="handleUpdateSelectedModel" direction="up"/>
     </div>
     <!-- <div id="model-selector">
       <select name="" id="models" v-model="currentModel" @click="handleUpdateSelectedModel">
@@ -389,9 +471,72 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
 
 <style lang="scss" >
 
-$shadow: 0px 0px 16px 0px rgba(0,0,0,.5);
-
-$border-radius: 1rem;
+// Light theme override for highlight.js codeblocks
+@media (prefers-color-scheme: light) {
+  .hljs {
+    color: #383a42 !important;
+    background: #fafafa !important;
+  }
+  .hljs-comment,
+  .hljs-quote {
+    color: #a0a1a7 !important;
+    font-style: italic;
+  }
+  .hljs-doctag,
+  .hljs-keyword,
+  .hljs-formula {
+    color: #a626a4 !important;
+  }
+  .hljs-section,
+  .hljs-name,
+  .hljs-selector-tag,
+  .hljs-deletion,
+  .hljs-subst {
+    color: #e45649 !important;
+  }
+  .hljs-literal {
+    color: #0184bb !important;
+  }
+  .hljs-string,
+  .hljs-regexp,
+  .hljs-addition,
+  .hljs-attribute,
+  .hljs-meta .hljs-string {
+    color: #50a14f !important;
+  }
+  .hljs-attr,
+  .hljs-variable,
+  .hljs-template-variable,
+  .hljs-type,
+  .hljs-selector-class,
+  .hljs-selector-attr,
+  .hljs-selector-pseudo,
+  .hljs-number {
+    color: #986801 !important;
+  }
+  .hljs-symbol,
+  .hljs-bullet,
+  .hljs-link,
+  .hljs-meta,
+  .hljs-selector-id,
+  .hljs-title {
+    color: #4078f2 !important;
+  }
+  .hljs-built_in,
+  .hljs-title.class_,
+  .hljs-class .hljs-title {
+    color: #c18401 !important;
+  }
+  .hljs-emphasis {
+    font-style: italic;
+  }
+  .hljs-strong {
+    font-weight: bold;
+  }
+  .hljs-link {
+    text-decoration: underline;
+  }
+}
 
 
 #system-prompt {
@@ -399,10 +544,10 @@ $border-radius: 1rem;
   height: auto;
   min-height: 50px;
 
-  background-color: #1E2230;
+  background-color: var(--bg-ac-1);
 
-  border: solid 1px #1E2230;
-  border-radius: $border-radius;
+  border: solid 1px var(--bg-ac-1);
+  border-radius: var(--border-radius);
 
   margin: var(--space);
   margin-bottom: 0;
@@ -414,12 +559,12 @@ $border-radius: 1rem;
   resize: none;
 
   // font-style: italic;
-  color: #888b94;
+  color: var(--text-muted);
 
   transition: .2s;
 
   &:hover {
-    border: 1px solid $key-1;
+    border: 1px solid var(--key-1);
   }
 }
 
@@ -443,17 +588,17 @@ $border-radius: 1rem;
     padding-left: var(--space);
 
     background-color: transparent;
-    border: solid 1px hsla(237, 100%, 70%, .2);
-    border-radius: $border-radius;
+    border: solid 1px var(--border-1);
+    border-radius: var(--border-radius);
 
-    background-color: hsla(237, 100%, 70%, .05);
+    background-color: var(--bg-alpha-2);
 
     backdrop-filter: blur(8px);
 
     transition: .2s;
 
     &:hover {
-      border-color: hsla(237, 100%, 70%, 1);
+      border-color: var(--key-2-solid);
     }
 
   }
@@ -471,7 +616,7 @@ $border-radius: 1rem;
   padding: 0;
   grid-area: thread;
 
-  background-color: #12141A;
+  background-color: var(--bg-1);
 }
 
 #thread {
@@ -499,7 +644,7 @@ $border-radius: 1rem;
 #prompt {
   width: calc(100% - var(--space) );
   height: 20%;
-  background-color: $bg-2;
+  background-color: var(--bg-2);
 
   display: flex;
   flex-direction: row;
@@ -515,12 +660,12 @@ $border-radius: 1rem;
   padding-left: var(--space);
   padding-right: var(--space);
 
-  border-radius: $border-radius;
+  border-radius: var(--border-radius);
 
   box-sizing: border-box;
 
   // shadow
-  box-shadow: $shadow;
+  box-shadow: var(--shadow);
 
   textarea {
     min-width: 0;
@@ -529,20 +674,20 @@ $border-radius: 1rem;
 
     resize: none;
 
-    background-color: $bg-ac-1;
-    color: $text-1;
+    background-color: var(--bg-ac-1);
+    color: var(--text-1);
 
-    border: solid 1px #1E2230;
-    border-radius: $border-radius;
+    border: solid 1px var(--bg-ac-1);
+    border-radius: var(--border-radius);
 
     &:active, &:focus {
-      border: solid 1px $key-2;
+      border: solid 1px var(--key-2);
     }
 
     transition: .2s;
 
     &:hover {
-      border: 1px solid $key-2;
+      border: 1px solid var(--key-2);
     }
 
   }
@@ -564,7 +709,7 @@ $border-radius: 1rem;
     height: $btn-size;
 
     border: none;
-    border-radius: $border-radius * 10000;
+    border-radius: 9999px;
 
     // background-color: hsla(240, 100%, 74%, 12%);
     background: transparent;
@@ -586,7 +731,7 @@ $border-radius: 1rem;
       height: calc($btn-size * 1.01);
 
 
-      background-color: hsla(240, 100%, 74%, 50%);
+      background-color: var(--key-2-alpha);
     }
 
     &:disabled {
@@ -613,10 +758,10 @@ $border-radius: 1rem;
 
   padding: var(--space);
 
-  border-radius: $border-radius;
-  border: 1px solid $bg-2;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--bg-2);
 
-  background-color: $bg-2;
+  background-color: var(--bg-2);
 
   transition: .2s;
 
@@ -624,7 +769,7 @@ $border-radius: 1rem;
 }
 
 .message:hover {
-  border: 1px solid $key-1;
+  border: 1px solid var(--key-1);
 }
 
 .message-user {
@@ -635,7 +780,88 @@ $border-radius: 1rem;
   justify-items: end;
 }
 .message-user:hover {
-  border: 1px solid $key-2;
+  border: 1px solid var(--key-2);
+}
+
+.thinking-block {
+  min-width: 0;
+  max-width: 70%;
+  list-style-type: none;
+  align-self: flex-start;
+
+
+
+  .thinking-details {
+    background-color: var(--thinking-bg);
+    border: 1px solid var(--thinking-border);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    transition: border-color .2s;
+
+    &.open {
+      border-color: var(--thinking-border-open);
+    }
+
+    &:hover {
+      border-color: var(--thinking-border-hover);
+    }
+  }
+
+  .thinking-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: calc(var(--space) * 0.75) var(--space);
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.85em;
+    font-style: italic;
+    color: var(--thinking-text);
+    list-style: none;
+
+    &::-webkit-details-marker { display: none; }
+
+    &::before {
+      content: '▶';
+      font-size: 0.7em;
+      transition: transform .2s;
+      display: inline-block;
+    }
+  }
+
+  .thinking-details.open > .thinking-summary::before {
+    transform: rotate(90deg);
+  }
+
+  .thinking-indicator {
+    animation: thinking-dots 1.2s infinite;
+    letter-spacing: 0.1em;
+  }
+
+  .thinking-content-wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.35s ease;
+  }
+
+  .thinking-details.open > .thinking-content-wrapper {
+    grid-template-rows: 1fr;
+  }
+
+  .thinking-content {
+    overflow: hidden;
+    min-height: 0;
+    padding: var(--space);
+    padding-top: 0;
+    font-size: 0.88em;
+    opacity: 0.75;
+    border-top: 1px solid var(--thinking-divider);
+  }
+}
+
+@keyframes thinking-dots {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 #model-selector {
@@ -672,11 +898,11 @@ $border-radius: 1rem;
 
 // Markdown styling
 .markdown-content {
-  color: #e8f4f8;
+  color: var(--md-text);
   line-height: 1.6;
 
   h1, h2, h3, h4, h5, h6 {
-    color: #6ec9f0;
+    color: var(--md-heading);
     font-weight: 700;
     margin-top: 1.5rem;
     margin-bottom: 0.75rem;
@@ -688,49 +914,39 @@ $border-radius: 1rem;
 
   strong, b {
     font-weight: 700;
-    color: #8ed4f5;
+    color: var(--md-strong);
   }
 
   em, i {
     font-style: italic;
-    color: #b8e3f7;
+    color: var(--md-em);
   }
 
   code {
-    background-color: #1a2b3a;
-    color: #9bc4db;
-    padding: 0.2em 0.4em;
     border-radius: 4px;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     font-size: 0.9em;
-
     overflow: scroll;
-
   }
 
   pre {
-    background-color: #0f1e2b;
-    border: 1px solid #2a4a5e;
     border-radius: 6px;
-    padding: 1rem;
     overflow-x: scroll;
     width: calc(100% - var(--space) * 2);
     margin: 1rem 0;
 
     code {
-      background-color: transparent;
       padding: 0;
-      color: #a8c8dc;
     }
   }
 
   a {
-    color: #4fb3e8;
+    color: var(--md-link);
     text-decoration: none;
     font-weight: 500;
 
     &:hover {
-      color: #6ec9f0;
+      color: var(--md-link-hover);
       text-decoration: underline;
     }
   }
@@ -738,14 +954,14 @@ $border-radius: 1rem;
   ul, ol {
     margin: 0.5rem 0;
     padding-left: 2rem;
-    color: #d4ebf5;
+    color: var(--md-list-text);
 
     li {
       margin: 0.25rem 0;
-      color: #c5e0f0;
+      color: var(--md-list-item);
 
       &::marker {
-        color: #6ec9f0;
+        color: var(--md-list-marker);
       }
     }
 
@@ -753,16 +969,16 @@ $border-radius: 1rem;
       margin: 0.25rem 0;
 
       li::marker {
-        color: #5ab8e3;
+        color: var(--md-list-marker-nested);
       }
     }
   }
 
   blockquote {
-    border-left: 4px solid #4fb3e8;
+    border-left: 4px solid var(--md-blockquote-border);
     padding-left: 1rem;
     margin: 1rem 0;
-    color: #b8e3f7;
+    color: var(--md-blockquote-text);
     font-style: italic;
   }
 
@@ -770,31 +986,31 @@ $border-radius: 1rem;
     border-collapse: collapse;
     width: 100%;
     margin: 1rem 0;
-    background-color: #1a3447;
+    background-color: var(--md-table-bg);
     border-radius: 6px;
     overflow: hidden;
 
     thead {
-      background-color: #2d5a7b;
+      background-color: var(--md-table-header);
 
       th {
-        color: #6ec9f0;
+        color: var(--md-table-header-text);
         font-weight: 700;
         padding: 0.75rem;
         text-align: left;
-        border-bottom: 2px solid #4fb3e8;
+        border-bottom: 2px solid var(--md-table-border);
         word-break: break-all;
       }
     }
 
     tbody {
       tr {
-        border-bottom: 1px solid #2d5a7b;
+        border-bottom: 1px solid var(--md-table-row-border);
 
         word-break: break-all;
 
         &:hover {
-          background-color: #223d52;
+          background-color: var(--md-table-row-hover);
         }
 
         &:last-child {
@@ -804,14 +1020,14 @@ $border-radius: 1rem;
 
       td {
         padding: 0.75rem;
-        color: #d4ebf5;
+        color: var(--md-table-text);
       }
     }
   }
 
   hr {
     border: none;
-    border-top: 2px solid #2d5a7b;
+    border-top: 2px solid var(--md-hr);
     margin: 1.5rem 0;
   }
 

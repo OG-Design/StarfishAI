@@ -1,11 +1,12 @@
 import type { Database } from "better-sqlite3";
-export function checkModelExistsOnGroup(db: Database, idUser: number, idGroup: number | undefined, modelFullName: any) {
+export function checkModelExistsOnGroup(db: Database, idUser: number, idGroup: number | undefined, modelFullName: any, thinkingLevel?: any) {
+    const hasThinkingFilter = thinkingLevel !== undefined && thinkingLevel !== null;
     const checkModelExists = db.prepare(`
         SELECT
         -- groupMembers
         groupMember.idGroupMember, username,
         -- model
-        model.name AS modelName, model.fullName AS modelFullName,
+        model.name AS modelName, model.fullName AS modelFullName, model.thinkingLevel,
         -- userGroup
         userGroup.idUserGroup, userGroup.name AS groupName
         FROM groupMember
@@ -24,8 +25,12 @@ export function checkModelExistsOnGroup(db: Database, idUser: number, idGroup: n
 
         /* By modelName */
         AND model.fullName = ?
-    `).all(idUser, idGroup, modelFullName);
-    return checkModelExists;
+
+        ${hasThinkingFilter ? '/* By thinkingLevel */ AND model.thinkingLevel = ?' : ''}
+    `);
+    return hasThinkingFilter
+        ? checkModelExists.all(idUser, idGroup, modelFullName, String(thinkingLevel))
+        : checkModelExists.all(idUser, idGroup, modelFullName);
 }
 
 export function checkModelExistsOnAll(db: Database, idUser: number, idGroup: number | undefined, modelFullName: any) {

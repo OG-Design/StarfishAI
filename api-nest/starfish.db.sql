@@ -37,12 +37,15 @@ CREATE TABLE IF NOT EXISTS groupMember (
 );
 
 
--- ai model selection based on access level
+
+-- ai model selection based on access level (updated structure)
 CREATE TABLE IF NOT EXISTS model (
   idModel INTEGER NOT NULL PRIMARY KEY,
   name TEXT NOT NULL,
-  fullName TEXT,
   userGroup_idUserGroup INTEGER,
+  fullName TEXT,
+  thinkingLevel TEXT,
+  technology TEXT,
   FOREIGN KEY (userGroup_idUserGroup) REFERENCES userGroup(idUserGroup)
 );
 

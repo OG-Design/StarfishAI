@@ -156,39 +156,39 @@ async function handleDeleteThreads() {
     offset: 0;
 
     padding: 0;
-    padding-top: $space;
+    padding-top: var(--space);
 
-    margin-left: calc($space / 2);
+    margin-left: calc(var(--space) / 2);
 
-    border-radius: $border-radius;
+    border-radius: var(--border-radius);
 
-    background-color: #171A21;
+    background-color: var(--bg-2);
 
     grid-area: menu;
     overflow-y: scroll;
     overflow-x: hidden;
 
-    box-shadow: $shadow;
+    box-shadow: var(--shadow);
     z-index: 100;
 
     button {
         height: fit-content;
 
-        padding: $space;
+        padding: var(--space);
 
         box-sizing: border-box;
-        border-radius: $border-radius;
+        border-radius: var(--border-radius);
 
-        color: #A0A4B8;
-        background-color: #1E2230;
-        border: 1px solid #1E2230;
+        color: var(--text-secondary);
+        background-color: var(--bg-ac-1);
+        border: 1px solid var(--bg-ac-1);
 
         transition: .2s;
 
         flex-grow: 1;
 
         &:hover {
-            border: 1px solid hsla(240, 100%, 74%, .4);
+            border: 1px solid var(--border-2);
         }
     }
 
@@ -200,22 +200,22 @@ async function handleDeleteThreads() {
         justify-content: space-around;
         align-items: start;
 
-        gap: $space;
-        padding: calc($space * 2);
+        gap: var(--space);
+        padding: calc(var(--space) * 2);
         padding-top: 0;
         padding-bottom: 0;
 
     }
 
     .override {
-        width: calc(100% - $space * 2);
+        width: calc(100% - var(--space) * 2);
 
-        margin: calc($space);
+        margin: var(--space);
         margin-top: 0;
     }
 
     .menu-child {
-        width: calc(100% - $space * 2);
+        width: calc(100% - var(--space) * 2);
         height: fit-content;
 
         display: flex;
@@ -243,7 +243,7 @@ async function handleDeleteThreads() {
 
     .menu-child:last-child {
         margin-top: auto;
-        margin-bottom: $space;
+        margin-bottom: var(--space);
     }
 
 
@@ -263,8 +263,8 @@ async function handleDeleteThreads() {
     }
 
     .selected-thread {
-        color: #E6E8EE;
-        border: 1px solid #7C7CFF;
+        color: var(--text-1);
+        border: 1px solid var(--key-2-bright);
     }
 }
 </style>

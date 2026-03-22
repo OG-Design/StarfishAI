@@ -68,10 +68,10 @@ function closeMessage() {
     padding: var(--space);
 
     background-color: transparent;
-    border: solid 1px hsla(237, 100%, 70%, .2);
-    border-radius: $border-radius;
+    border: solid 1px var(--border-1);
+    border-radius: var(--border-radius);
 
-    background-color: hsla(237, 100%, 70%, .05);
+    background-color: var(--bg-alpha-2);
 
     backdrop-filter: blur(8px);
 
@@ -83,7 +83,7 @@ function closeMessage() {
     align-items: center;
 
     &:hover {
-      border-color: hsla(237, 100%, 70%, 1);
+      border-color: var(--key-2-solid);
     }
 
 
