@@ -76,6 +76,11 @@ export class AiController {
         return this.aiService.addModel(model, group, session);
     }
 
+    @Post('model/delete')
+    deleteModel() {
+
+    }
+
     @Post('model/all')
     getModelsByGroup(
         @Session() session: Record<string, any>,

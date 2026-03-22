@@ -12,6 +12,8 @@ import { ConfigService } from '@nestjs/config';
 
 import db from '../db';
 import { Observable } from 'rxjs';
+import { getUserGroupPermissions } from 'src/composables/getUserModelPermissions';
+import { checkModelExistsOnGroup, checkModelExistsOnAll } from 'src/composables/checkModelExists';
 
 function parseJsonFromString(str: string): any | null {
     const match = str.match(/{[\s\S]*}/);
@@ -227,17 +229,7 @@ export class AiService {
                     console.log("Starting async logic...")
 
 
-                    const checkUserPermission: any = db.prepare(`
-                        SELECT 
-                        -- groupMembers
-                        groupMember.idGroupMember, groupMember.user_idUser, groupMember.permissionLevel AS groupMemberPermissionLevel,
-                        -- userGroup
-                        userGroup.idUserGroup, userGroup.name AS groupName, userGroup.permissionLevel AS userGroupPermissionLevel
-                        FROM groupMember
-                        INNER JOIN userGroup
-                        ON userGroup.idUserGroup = groupMember.userGroup_idUserGroup
-                        WHERE groupMember.user_idUser = ? AND userGroup.idUserGroup = ?
-                    `).all(idUser, idGroup);
+                    const checkUserPermission: any = getUserGroupPermissions(db, idUser, idGroup);
 
                     console.log("DEBUG: addModel permission check");
                     console.log("idUser:", idUser);
@@ -247,7 +239,7 @@ export class AiService {
                         console.log("groupMemberPermissionLevel:", checkUserPermission[0].groupMemberPermissionLevel);
                     }
 
-                    // check if user has admin privileges 
+                    // check if user has admin privileges
                     if (checkUserPermission.length==0 || checkUserPermission[0].groupMemberPermissionLevel != "admin") {
                         console.error("Permission denied");
                         observer.error(new UnauthorizedException("A user with id: " + idUser + " tried to access a group they don't administrator privileges in. group id: " + idGroup));
@@ -256,39 +248,13 @@ export class AiService {
 
 
                     console.log("Trying to add a model, checking if it already exists on group", groupName);
-                    const checkModelExists = db.prepare(`
-                        SELECT
-                        -- groupMembers
-                        groupMember.idGroupMember, username,
-                        -- model
-                        model.name AS modelName, model.fullName AS modelFullName,
-                        -- userGroup
-                        userGroup.idUserGroup, userGroup.name AS groupName
-                        FROM groupMember
-                        INNER JOIN userGroup
-                        ON userGroup.idUserGroup = groupMember.userGroup_idUserGroup
-                        INNER JOIN model
-                        ON model.userGroup_idUserGroup = userGroup.idUserGroup
-                        INNER JOIN user
-                        ON user.idUser = groupMember.user_idUser
+                    const checkModelExistsOnGroupVar = checkModelExistsOnGroup(db, idUser, idGroup, modelFullName);
 
-                        /* By user */
-                        WHERE idUser = ?
-
-                        /* By group */
-                        AND idUserGroup = ?
-
-                        /* By modelName */
-                        AND model.fullName = ?
-                    `).all(idUser, idGroup, modelFullName);
-
-                    
-
-                    console.log("Table: checkModelExists");
-                    console.table(checkModelExists);
+                    console.log("Table: checkModelExistsOnGroup");
+                    console.table(checkModelExistsOnGroupVar);
 
                     // check if model exists in db
-                    if (checkModelExists.length!=0) {
+                    if (checkModelExistsOnGroupVar.length!=0) {
                         console.log("Model already exists!");
                         observer.error(new ConflictException("Model " + modelFullName + " already exists on group: " + groupName));
                         return;
@@ -310,8 +276,8 @@ export class AiService {
                     for await (const event of model as AsyncIterable<any>) {
                         console.log("Pull event:", event);
                         lastStatus= event?.status ?? lastStatus;
-                        
-                        
+
+
                         if (event?.total) {
                             totalBytes = event.total;
                         }
@@ -358,6 +324,22 @@ export class AiService {
             })();
         });
 
+    }
+
+    deleteModel(idUser: number, idGroup: number | undefined, modelFullName: string) {
+        try {
+            // returns userGroup and it's permission level
+            const checkUserPermission = getUserGroupPermissions(db, idUser, idGroup);
+
+            if (checkUserPermission[0].groupMemberPermissionLevel !== 'admin') {
+                return new UnauthorizedException('You do not have administrator access to this group');
+            }
+
+
+
+        } catch (err) {
+
+        }
     }
 
     // get models available to user by group 

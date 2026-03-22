@@ -1,10 +1,2 @@
 @echo off
-
-@REM SYNC .env
-start /d "./webapp" .\sync.env.bat
-
-start /d "./redis" docker-compose up -d
-start /d "./ollama" docker-compose up -d
-
-start /d "./api-nest" npm run start:dev
-start /d "./webapp" npm run dev
+npm run pm2:start:all

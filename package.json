@@ -1,5 +1,19 @@
 {
     "scripts": {
+        "sync:env": "cd webapp && sync.env.bat",
+        "docker:pull:ollama": "docker --context desktop-linux pull ollama/ollama:latest",
+        "docker:pull:redis": "docker --context desktop-linux pull redis:latest",
+        "docker:up:redis": "cd redis && docker --context desktop-linux compose up -d",
+        "docker:up:ollama": "cd ollama && docker --context desktop-linux compose up -d",
+        "pm2:start:api": "pm2 start cmd --interpreter none --name api-nest --cwd ./api-nest -- /d /s /c npm run start:dev",
+        "pm2:start:webapp": "pm2 start cmd --interpreter none --name webapp --cwd ./webapp -- /d /s /c npm run dev",
+        "pm2:start:services": "npm run pm2:start:api && npm run pm2:start:webapp",
+        "pm2:start:all": "npm run sync:env && npm run docker:pull:ollama && npm run docker:pull:redis && npm run docker:up:redis && npm run docker:up:ollama && npm run pm2:start:services",
+        "pm2:status": "pm2 status",
+        "pm2:logs": "pm2 logs",
+        "pm2:stop:all": "pm2 stop all",
+        "pm2:delete:all": "pm2 delete all",
+        "pm2:delete:project": "pm2 delete api-nest webapp",
         "api-nest:build": "cd api-nest && npm run build",
         "webapp:build": "cd webapp && npm run build",
         "electron:build": "cd electron && npm run build",
@@ -7,6 +21,7 @@
         "build": "npm run api-nest:build && npm run webapp:build && npm run electron:build && npm run electron:rebuild"
     },
     "devDependencies": {
-        "electron-rebuild": "^3.2.9"
+        "@electron/rebuild": "^3.2.9",
+        "pm2": "^5.4.3"
     }
 }
