@@ -1,4 +1,5 @@
 export type ModelOption = {
   modelName: string,
-  modelFullName: string
+  modelFullName: string,
+  idGroup: number
 }

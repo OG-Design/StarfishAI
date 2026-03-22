@@ -4,7 +4,7 @@ import {ref, onMounted, computed, watch, nextTick} from 'vue';
 
 import MarkdownIt from 'markdown-it';
 
-import { sendPrompt, aiChunks, socket } from '../composables/useSocket';
+import { sendPrompt, aiChunks, socket, connectSocket } from '../composables/useSocket';
 
 import CustomSelect from './CustomSelect.vue';
 import { type CustomSelectType } from '../types/CustomSelectType';
@@ -150,7 +150,7 @@ const prompt = ref(null);
 const currentMessage = computed(()=>aiChunks.value.join(''));
 
 // handles the users prompt and refreshes messages in the open thread
-function handlePrompt() {
+async function handlePrompt() {
 
   if (!currentModel.value) return console.log("No model selected"); // check if current model exists
 
@@ -169,9 +169,6 @@ function handlePrompt() {
   // Set loading state to true
   isLoading.value = true;
 
-  // Send the prompt via WebSocket
-  sendPrompt(props.idThread, message, currentModel.value.modelFullName); // model: llama3 llama3.2 smollm2:135m dolphin-phi
-
   console.log("Selected model:", currentModel.value);
 
   // Debug log to verify messages
@@ -180,6 +177,13 @@ function handlePrompt() {
   // Create a placeholder for the assistant's message
   let assistantMessage = { role: 'assistant', content: '', complete: false };
   messages.value.push(assistantMessage);
+
+  const cleanupListeners = () => {
+    socket?.off('ai_chunk', handleChunk);
+    socket?.off('ai_complete', handleComplete);
+    socket?.off('error', handleError);
+    socket?.off('connect_error', handleConnectError);
+  };
 
   // Handle WebSocket events
   const handleChunk = (chunk: any) => {
@@ -201,33 +205,49 @@ function handlePrompt() {
     isLoading.value = false;
 
     // Clean up listeners
-    socket?.off('ai_chunk', handleChunk);
-    socket?.off('ai_complete', handleComplete);
+    cleanupListeners();
   };
 
-  // Set up WebSocket listeners
-  socket?.on('ai_chunk', handleChunk);
-  socket?.once('ai_complete', handleComplete);
-
-  socket?.once('error', (err) => {
+  const handleError = (err: any) => {
     console.error("Socket error:", err);
     isLoading.value = false;
-    alert("Error occurred while processing your request.\n Error: " + err.message);
+    cleanupListeners();
+    alert("Error occurred while processing your request.\n Error: " + (err?.message ?? "Unknown error"));
+  };
 
-    // Clean up listeners
-    socket?.off('ai_chunk', handleChunk);
-    socket?.off('ai_complete', handleComplete);
-  });
-
-  socket?.once('connect_error', (err) => {
+  const handleConnectError = (err: any) => {
     console.error("Connection error:", err);
     isLoading.value = false;
+    cleanupListeners();
     alert("Connection error occurred");
+  };
 
-    // Clean up listeners
-    socket?.off('ai_chunk', handleChunk);
-    socket?.off('ai_complete', handleComplete);
-  });
+  try {
+    await connectSocket();
+    if (!socket) {
+      throw new Error('Socket not connected');
+    }
+
+    // Set up WebSocket listeners before emitting prompt to avoid missing fast error responses.
+    socket.on('ai_chunk', handleChunk);
+    socket.once('ai_complete', handleComplete);
+    socket.once('error', handleError);
+    socket.once('connect_error', handleConnectError);
+
+    console.log("currentModel:", currentModel.value);
+
+    // Send the prompt via WebSocket
+    const idGroup = Number((currentModel.value as any).idGroup ?? (currentModel.value as any).idUserGroup);
+    if (!idGroup) {
+      throw new Error('Model group id is missing. Re-select the model in Settings.');
+    }
+    await sendPrompt(props.idThread, message, currentModel.value.modelFullName, idGroup); // model: llama3 llama3.2 smollm2:135m dolphin-phi
+  } catch (err: any) {
+    console.error('Failed to send prompt:', err);
+    isLoading.value = false;
+    cleanupListeners();
+    alert("Error occurred while processing your request.\n Error: " + (err?.message ?? "Unknown error"));
+  }
 }
 
 // changes title of thread

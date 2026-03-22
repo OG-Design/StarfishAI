@@ -125,10 +125,24 @@ async function fetchModelsByGroup() {
         body: JSON.stringify(body)
     })
 
-    models.value = await res.json();
+    const data = await res.json();
+    console.log(data);
+
+    const mappedData = data.map((model) => {
+        const mapModel = {
+            modelName: model.modelName,
+            modelFullName: model.modelFullName,
+            idGroup: selectedGroupId.value
+        };
+        return mapModel;
+    })
+
+    models.value = mappedData;
+
+
 
     // debug
-    console.log("In Settings: models: \n", await models.value);
+    console.log("In Settings: models: \n", models.value);
 
     emit("updateModels", models.value); // emit to parent to pass from parent to OpenThread, this allows the list of models to be displayed
 }

@@ -1,7 +1,7 @@
 const PORT_WEBAPP = 5173;
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean);
 
-import { Session, Body, UnauthorizedException} from '@nestjs/common';
+import { Session, Body, UnauthorizedException, BadRequestException} from '@nestjs/common';
 import { SubscribeMessage, WebSocketGateway, MessageBody, ConnectedSocket } from '@nestjs/websockets';
 
 import * as jwt from "jsonwebtoken";
@@ -13,7 +13,7 @@ import { AuthService } from 'src/auth/auth.service';
 import db from '../db';
 
 
-
+import { checkModelExistsOnGroup } from 'src/composables/checkModelExists';
 
 import { Socket } from 'socket.io';
 import { Ollama } from 'ollama';
@@ -44,10 +44,12 @@ export class ChateventGateway {
     @MessageBody() data: {
       thread: number,
       message: any,
-      model: string
+      model: string,
+      idGroup: number
     },
     @ConnectedSocket() client: Socket,
   ) {
+
 
 
     const cookieHeader = client.handshake.headers.cookie ?? '';
@@ -165,6 +167,15 @@ export class ChateventGateway {
             console.error(e)
         }
     })
+
+    const checkModelExists = checkModelExistsOnGroup(db, idUser, data.idGroup, data.model);
+    console.log("idGroup:", data.idGroup);
+    console.log("checkModelExists:", checkModelExists);
+
+    if (checkModelExists.length<=0) {
+      client.emit('error', { message: 'Model either not downloaded or permission denied' });
+      return;
+    }
 
     // create new ollama and make connection via env
     const ollamaClient = new Ollama({ host: this.ollamaURL });
