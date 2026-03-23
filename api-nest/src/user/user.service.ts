@@ -78,9 +78,8 @@ export class UserService {
 
     getGroup(session: any): any {
         const idUser = session.user.idUser;
-
         const groups = db.prepare(`
-SELECT idGroupMember, userGroup.name, userGroup.permissionLevel, username, userGroup_idUserGroup, user_idUser
+SELECT idGroupMember, userGroup.name, groupMember.permissionLevel, username, userGroup_idUserGroup, user_idUser
 FROM groupMember
 INNER JOIN userGroup -- join userGroup's (the permission level groups)
 ON groupMember.userGroup_idUserGroup = userGroup.idUserGroup

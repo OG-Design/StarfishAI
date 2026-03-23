@@ -101,14 +101,14 @@ async function fetchUserGroup() {
 
     const groupsRes = await res.json();
 
-        groups.value = groupsRes;
-        if (groupsRes.length > 0) {
-            selectedGroupId.value = groupsRes[0].userGroup_idUserGroup;
-            selectedGroup.value = groupsRes[0];
-            emit('updateSelectedGroup', groupsRes[0]);
-        }
-        console.log("Selected group:", selectedGroup.value);
-        console.log("UserGroups: \n", groups.value);
+    groups.value = groupsRes;
+    if (groupsRes.length > 0) {
+        selectedGroupId.value = groupsRes[0].userGroup_idUserGroup;
+        selectedGroup.value = groupsRes[0];
+        emit('updateSelectedGroup', groupsRes[0]);
+    }
+    console.log("Selected group:", selectedGroup.value);
+    console.log("UserGroups: \n", groups.value);
 }
 
 
@@ -358,7 +358,7 @@ onMounted(async () => {
                                 <th>Thinking Level</th>
                                 <th v-if="!editMode_models">Status</th>
                                 <th v-if="editMode_models"><button @click="deleteSelectedModels">Delete</button></th>
-                                <th><button @click="toggleEditMode">...</button></th>
+                                <th><button @click="toggleEditMode" v-if="selectedGroup.permissionLevel==='admin'">...</button></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -374,7 +374,7 @@ onMounted(async () => {
                                 <td data-label="Thinking">{{ model.thinking }}</td>
                                 <td data-label="Select"><input type="checkbox" v-model="selectedModels" :value="model" :key="index"></td>
                             </tr>
-                            <tr>
+                            <tr v-if="selectedGroup.permissionLevel==='admin'">
                                 <td data-label="Display Name"><input type="text" name="" id="modelName" placeholder="name" v-model="addName"></td>
                                 <td data-label="Model Name"><input type="text" name="" id="modelFullName" placeholder="fullname" v-model="addFullName"></td>
                                 <td data-label="Model Thinking Level"><CustomSelect :values="[{key: 'Regular Thinking', value: 'true'},{key: 'Off', value: 'false'},{key: 'Low Thinking', value: 'low'},{key: 'Medium Thinking', value: 'medium'},{key: 'High Thinking', value: 'high'}]" :current-selection="addThinking" :update-handler="handleThinkingChange" direction="down"/></td>
