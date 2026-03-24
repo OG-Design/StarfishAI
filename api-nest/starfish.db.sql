@@ -65,8 +65,14 @@ CREATE TABLE IF NOT EXISTS file (
   mimetype TEXT,
   alt TEXT,
   originalName TEXT,
-  message_idMessage INTEGER,
   user_idUser INTEGER NOT NULL,
-  FOREIGN KEY (message_idMessage) REFERENCES message(idMessage),
   FOREIGN KEY (user_idUser) REFERENCES user(idUser)
+)
+
+CREATE TABLE IF NOT EXISTS message_files (
+  idMessage_files INTEGER NOT NULL PRIMARY KEY,
+  message_idMessage INTEGER,
+  file_idFile INTEGER NOT NULL,
+  FOREIGN KEY (message_idMessage) REFERENCES message(idMessage),
+  FOREIGN KEY (file_idFile) REFERENCES file(idFile)
 )
