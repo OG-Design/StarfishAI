@@ -55,6 +55,18 @@ CREATE TABLE IF NOT EXISTS message (
   idThread INTEGER NOT NULL,
   isSystem INTEGER,
   latestModel_idModel INTEGER,
-  FOREIGN KEY (idThread) REFERENCES thread(idThread),
+  FOREIGN KEY (idThread) REFERENCES thread(idThread) ON DELETE CASCADE,
   FOREIGN KEY (latestModel_idModel) REFERENCES model(idModel)
 );
+
+CREATE TABLE IF NOT EXISTS file (
+  idFile INTEGER NOT NULL PRIMARY KEY,
+  path TEXT NOT NULL,
+  mimetype TEXT,
+  alt TEXT,
+  originalName TEXT,
+  message_idMessage INTEGER,
+  user_idUser INTEGER NOT NULL,
+  FOREIGN KEY (message_idMessage) REFERENCES message(idMessage),
+  FOREIGN KEY (user_idUser) REFERENCES user(idUser)
+)
