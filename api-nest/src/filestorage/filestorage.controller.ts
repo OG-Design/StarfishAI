@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards, Res, Post, UseInterceptors, UploadedFile, Session, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Res, Post, UseInterceptors, UploadedFile, Session, UploadedFiles, Body } from '@nestjs/common';
 
 import type { Response } from 'express';
 
@@ -31,13 +31,15 @@ export class FilestorageController {
         }
     }
 
-    @Get(':user/:file')
-    getFile(@Param('user') idUser: number, @Param('file') fileName: string, @Res() res: Response) {
+    @Post('/files')
+    getFile(@Session() session, @Body('file') filePaths: string[], @Res() res: Response) {
+
+        const idUser = session.user.idUser;
 
         console.log('getting file for user:', idUser);
 
         try {
-            const file = this.fileStorageService.getUserFile(idUser, fileName);
+            const file = this.fileStorageService.getUserRequestedFiles(idUser, filePaths);
             res.setHeader('Content-Type', 'application/octet-stream');
             res.send(file);
         } catch (err) {

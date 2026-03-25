@@ -185,7 +185,11 @@ const currentMessage = computed(()=>aiChunks.value.join(''));
 async function handlePrompt() {
 
   try {
-    await handleFileUpload();
+    const res = await handleFileUpload();
+    console.log(res);
+    APIFilePaths.value = res;
+    const res1 = await fetchMessageImages();
+    images.value = res1; // += ?
   } catch (err) {
     console.error('File upload failed:', err);
   }
@@ -346,6 +350,7 @@ async function handleThreadChange() {
 }
 
 const refFiles = ref<File[]>([]);
+const APIFilePaths = ref<string[]>();
 
 function onFileChange(event: Event) {
   const target = event?.target as HTMLInputElement;
@@ -376,7 +381,29 @@ async function handleFileUpload() {
   const data = await res.json();
   console.log('File upload result:', data);
 
-  return;
+  return data.filesIndex;
+}
+
+const images = ref();
+async function fetchMessageImages() {
+  
+  const body = {
+    filePaths: APIFilePaths.value
+  };
+
+  const res = await apiFetch('/api/filestorage/files', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/octet-stream'
+    }, 
+    body: JSON.stringify(body)
+  });  
+
+  const data = await res.json();
+
+  console.log('res from fetchMessageImages:', data)
+  
+  return data;
 
 }
 

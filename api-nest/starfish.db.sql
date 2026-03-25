@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS message (
 CREATE TABLE IF NOT EXISTS file (
   idFile INTEGER NOT NULL PRIMARY KEY,
   path TEXT NOT NULL,
+  fileName TEXT,
   mimetype TEXT,
   alt TEXT,
   originalName TEXT,

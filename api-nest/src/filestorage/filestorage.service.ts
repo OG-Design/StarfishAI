@@ -24,24 +24,30 @@ export class FilestorageService {
     }
 
     // get content of a spesific file
-    getUserFile(idUser: number, fileName: string) {
-        const fileExists = db.prepare(`SELECT * FROM file WHERE user_idUser = ? AND path = ?`).all(idUser, fileName);
+    getUserRequestedFiles(idUser: number, filePaths: string[]) {
+        let files: any[] = [];
+        filePaths.forEach(filePath => {
+            const fileExists = db.prepare(`SELECT * FROM file WHERE user_idUser = ? AND path = ?`).all(idUser, filePath);
 
-        const filePath = path.join(__dirname, this.pathLevel, 'static/user-assets', `${idUser}/${fileName}`);
+            const fullFilePath = path.join(__dirname, this.pathLevel, filePath);
 
-        console.log('File requested from:', filePath);
+            console.log('File requested from:', fullFilePath);
 
-        if (fileExists.length === 0 || !idUser || !fileName) {
-            throw new NotFoundException('File not found');
-        }
+            if (fileExists.length === 0 || !idUser || !filePath) {
+                
+                // throw new NotFoundException('File not found');
+            }
 
-        const file = fs.readFileSync(filePath);
+            const file = fs.readFileSync(fullFilePath);
 
-        return file;
+            files.push(file || 'Not Found');
+            
+        })
+        return files
     }
 
     // save a user's file upload
-    handleUserUpload(idUser: number, file: Express.Multer.File, partialPath: string) {
+    handleUserUpload(idUser: number, file: Express.Multer.File, savePath: string) {
         console.log('Saving data from', file.filename, 'to database.');
         const fileName = file.filename;
         // const filePath = file.path;
@@ -53,7 +59,9 @@ export class FilestorageService {
             // add to database
             db.prepare(`
                 INSERT INTO file (fileName, path, mimetype, alt, originalName, user_idUser) VALUES (?, ?, ?, ?, ?, ?);
-            `).run(fileName, partialPath, mimetype, 'No alt', originalName, idUser);
+            `).run(fileName, savePath, mimetype, 'No alt', originalName, idUser);
+
+            return { path: path.join(savePath, fileName) }
 
         } catch (err) {
             console.error('Error while uploading file:', err);
@@ -62,9 +70,12 @@ export class FilestorageService {
     }
 
     handleUserUploads(idUser: number, files: Express.Multer.File[], partialPath: string) {
+        let filesIndex: string[] = [];
         files.forEach( file => {
-            this.handleUserUpload(idUser, file, partialPath);
+            const savePath = path.join(partialPath, file.filename)
+            this.handleUserUpload(idUser, file, savePath);
+            filesIndex.push(savePath);
         });
-        return { message: 'Successfully uploaded and saved files!' };
+        return { message: 'Successfully uploaded and saved files!', filesIndex };
     }
 }
