@@ -15,11 +15,15 @@ import { SystemService } from './system/system.service';
 import { SystemController } from './system/system.controller';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { FilestorageService } from './filestorage/filestorage.service';
+import { FilestorageModule } from './filestorage/filestorage.module';
+import { FilestorageController } from './filestorage/filestorage.controller';
 
 @Module({
   imports: [
     UserModule,
     AuthModule,
+    FilestorageModule,
     // for dev: ../../../.env.development
     // for prod: ../../../.env.production
     ConfigModule.forRoot({
@@ -37,6 +41,7 @@ import { join } from 'path';
       rootPath: join(__dirname, '..', '..', 'webapp', 'dist'),
       exclude: ['/api/{*path}', '/socket.io/{*path}'],
     }),
+    FilestorageModule,
   ],
   controllers: [AppController, UserController, AuthController, AiController, SystemController],
   providers: [AppService, UserService, AuthService, AiService, ChateventGateway, SystemService],

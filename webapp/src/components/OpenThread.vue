@@ -184,6 +184,13 @@ const currentMessage = computed(()=>aiChunks.value.join(''));
 // handles the users prompt and refreshes messages in the open thread
 async function handlePrompt() {
 
+  try {
+    await handleFileUpload();
+  } catch (err) {
+    console.error('File upload failed:', err);
+  }
+
+
   if (!currentModel.value) return console.log("No model selected"); // check if current model exists
 
   // Structure the user message
@@ -338,6 +345,40 @@ async function handleThreadChange() {
 
 }
 
+const refFiles = ref<File[]>([]);
+
+function onFileChange(event: Event) {
+  const target = event?.target as HTMLInputElement;
+  if (target.files && target.files.length > 0) {
+    refFiles.value = Array.from(target.files);
+  }
+
+  console.log("onFileChange files:", refFiles.value);
+}
+
+async function handleFileUpload() {
+
+  if (refFiles.value.length === 0) {
+    return;
+  }
+
+  const formData = new FormData();
+
+  refFiles.value.forEach(file => {
+    formData.append('files', file);
+  })
+
+  const res = await apiFetch('/api/filestorage/upload', {
+    method: 'POST',
+    body: formData
+  });
+
+  const data = await res.json();
+  console.log('File upload result:', data);
+
+  return;
+
+}
 
 // sends the personality e.g the system prompt to the API
 async function handlePersonalityChange() {
@@ -462,6 +503,7 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
     <!-- Prompt elements -->
     <form id="prompt" @submit.prevent="handlePrompt">
       <textarea type="text" name="send-message" v-model="prompt"></textarea>
+      <input type="file" multiple="true" v-on:change="onFileChange">
       <div>
         <button type="submit" :disabled="isLoading"><img class="prompt-image" :src="promptAnimationSrc" alt=""></button>
       </div>
