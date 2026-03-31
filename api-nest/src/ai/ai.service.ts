@@ -148,19 +148,23 @@ export class AiService {
             return [];
         }
         const messages = db.prepare('SELECT * FROM message WHERE idThread = ?').all(thread);
-        // console.log(messages);
 
+        const getFilesForMessage = db.prepare(`
+            SELECT f.idFile, f.fileName, f.originalName, f.mimetype
+            FROM message_files mf
+            JOIN file f ON mf.file_idFile = f.idFile
+            WHERE mf.message_idMessage = ?
+        `);
 
-        // defines constructedArray as an empty object array
         let constructedArray: object[] = [];
 
-        // runs through each message and formats dataa
         messages.forEach((message: any) => {
-            // pushes formated message to constructedArray
-            constructedArray.push(parseJsonFromString(message.data));
+            const parsed = parseJsonFromString(message.data);
+            if (parsed) {
+                parsed.files = getFilesForMessage.all(message.idMessage);
+            }
+            constructedArray.push(parsed);
         });
-
-        // console.log(constructedArray);
 
         return constructedArray;
     }

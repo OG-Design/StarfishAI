@@ -50,14 +50,13 @@ export class FilestorageService {
     handleUserUpload(idUser: number, file: Express.Multer.File, savePath: string) {
         console.log('Saving data from', file.filename, 'to database.');
         const fileName = file.filename;
-        // const filePath = file.path;
         const originalName = file.originalname;
         const mimetype = file.mimetype;
 
         try {
 
             // add to database
-            db.prepare(`
+            const result = db.prepare(`
                 INSERT INTO file (fileName, path, mimetype, alt, originalName, user_idUser) VALUES (?, ?, ?, ?, ?, ?);
             `).run(fileName, savePath, mimetype, 'No alt', originalName, idUser);
 

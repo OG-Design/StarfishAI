@@ -4,6 +4,7 @@ import { FilestorageController } from './filestorage.controller';
 
 @Module({
   providers: [FilestorageService],
-  controllers: [FilestorageController]
+  controllers: [FilestorageController],
+  exports: [FilestorageService]
 })
 export class FilestorageModule {}

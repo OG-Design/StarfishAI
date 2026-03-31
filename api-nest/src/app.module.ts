@@ -44,6 +44,6 @@ import { FilestorageController } from './filestorage/filestorage.controller';
     FilestorageModule,
   ],
   controllers: [AppController, UserController, AuthController, AiController, SystemController],
-  providers: [AppService, UserService, AuthService, AiService, ChateventGateway, SystemService],
+  providers: [AppService, UserService, AuthService, AiService, ChateventGateway, SystemService, FilestorageService],
 })
 export class AppModule {}

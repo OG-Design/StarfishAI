@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 
 import fs from 'fs';
+import session from 'express-session';
 
 @Controller('filestorage')
 // @UseGuards(UserFileGuard)
@@ -46,16 +47,12 @@ export class FilestorageController {
             console.error('Filestorage error while using getFile:', err);
             res.status(404).send('File not found');
         }
-
     }
 
     @Post('/upload')
     @UseInterceptors(FilesInterceptor('files', 10, {
         storage: diskStorage({
             destination: (req: any, file: any, cb: any) => {
-
-
-
                 const idUser = req.session.user.idUser;
                 if (!idUser || !req.session || !req.session.user) {
                     return cb(new Error('User not authenticated'));

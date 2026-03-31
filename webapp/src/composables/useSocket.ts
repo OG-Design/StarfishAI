@@ -111,7 +111,7 @@ export async function connectSocket(): Promise<Socket | null> {
 }
 
 // sends prompt messages with the model object attached.
-export async function sendPrompt(thread: number, message: object, model: { modelFullName: string, thinkingLevel?: any }, idGroup: number): Promise<void> {
+export async function sendPrompt(thread: number, message: object, model: { modelFullName: string, thinkingLevel?: any }, fileIds: number[], idGroup: number): Promise<void> {
     console.log("Sending prompt:", { thread, message, model });
     aiChunks.value = [];
 
@@ -121,11 +121,56 @@ export async function sendPrompt(thread: number, message: object, model: { model
 
     if (socket && socket.connected) {
         console.log("Emitting prompt on socket id:", socket.id);
-        socket.emit('prompt', { thread, message, model, idGroup });
+        socket.emit('prompt', { thread, message, model, idGroup, fileIds });
     } else {
         throw new Error('Socket not connected, call connectSocket() first');
     }
+}
 
+export interface PromptHandlers {
+    onChunk: (chunk: string) => void;
+    onThinkingChunk: (chunk: string) => void;
+    onThinkingComplete: () => void;
+    onComplete: () => void;
+    onError: (err: any) => void;
+}
+
+// Connects, registers all event listeners, emits the prompt, and returns a cleanup function.
+export async function sendPromptWithHandlers(
+    thread: number,
+    message: object,
+    model: { modelFullName: string, thinkingLevel?: any },
+    fileIds: number[],
+    idGroup: number,
+    handlers: PromptHandlers
+): Promise<() => void> {
+    await connectSocket();
+    if (!socket) {
+        throw new Error('Socket not connected');
+    }
+
+    const cleanup = () => {
+        socket?.off('ai_chunk', handlers.onChunk);
+        socket?.off('ai_thinking_chunk', handlers.onThinkingChunk);
+        socket?.off('ai_thinking_complete', handlers.onThinkingComplete);
+        socket?.off('ai_complete', handlers.onComplete);
+        socket?.off('error', handlers.onError);
+        socket?.off('connect_error', handlers.onError);
+    };
+
+    socket.on('ai_chunk', handlers.onChunk);
+    socket.on('ai_thinking_chunk', handlers.onThinkingChunk);
+    socket.once('ai_thinking_complete', handlers.onThinkingComplete);
+    socket.once('ai_complete', handlers.onComplete);
+    socket.once('error', handlers.onError);
+    socket.once('connect_error', handlers.onError);
+
+    aiChunks.value = [];
+    console.log("Sending prompt:", { thread, message, model });
+    console.log("Emitting prompt on socket id:", socket.id);
+    socket.emit('prompt', { thread, message, model, idGroup, fileIds });
+
+    return cleanup;
 }
 
 
