@@ -27,7 +27,7 @@ const props = defineProps<{title: string, index: number, idThread: number, model
 
 import type { ModelOption } from '../types/ModelOption';
 import { apiFetch, apiBase } from '../composables/useApi';
-
+import PlaySound from './PlaySound.vue';
 
 const isElectron = typeof window !== "undefined" && window.location.protocol === "file:";
 const assetBase = isElectron ? './animation/' : '/animation';
@@ -150,33 +150,6 @@ async function getAllMessages() {
 
 const prompt = ref(null);
 
-
-// sends a prompt and awaits the response
-// async function handlePromptFallback() {
-//   isLoading.value = true;
-//   const body = {
-//     model: "llama3",
-//     message: {
-//       role: "user",
-//       content: prompt.value
-//     },
-//     thread: props.idThread
-//   }
-//   const res = await fetch('/api/ai/chat', {
-//     method: "POST",
-//     headers: {
-//         'Content-Type':'application/json'
-//     },
-//     body: JSON.stringify(body)
-//   })
-
-//   getAllMessages();
-
-//   console.log(await res);
-
-//   isLoading.value = false;
-
-// }
 
 // joins the chunks currently done.
 const currentMessage = computed(()=>aiChunks.value.join(''));
@@ -517,7 +490,9 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
           <div class="markdown-content" v-html="md.render(message.content ?? '')"></div>
         </li>
 
-        <button v-if="message.role === 'assistant' && isLoading === false" class="play-sound-button">Play Sound</button>
+        <template v-if="message.role === 'assistant' && isLoading === false" class="play-sound-button">
+          <PlaySound :textContent="message.content"/>
+        </template>
 
       </template>
 
@@ -993,11 +968,6 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
     opacity: 0.75;
     border-top: 1px solid var(--thinking-divider);
   }
-}
-
-.play-sound-button {
-  margin-left: calc(70% + var(--space));
-  transform: translateY(calc(-1 * var(--space) * 9));
 }
 
 @keyframes thinking-dots {
