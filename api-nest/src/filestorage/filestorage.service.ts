@@ -23,6 +23,22 @@ export class FilestorageService {
         return files;
     }
 
+    // get a single file's buffer and mimetype by fileName
+    getUserFile(idUser: number, fileName: string): { buffer: Buffer; mimetype: string } {
+        const fileRecord: any = db.prepare(`SELECT * FROM file WHERE user_idUser = ? AND fileName = ?`).get(idUser, fileName);
+        if (!fileRecord) {
+            throw new NotFoundException('File not found');
+        }
+
+        const fullFilePath = path.join(__dirname, this.pathLevel, fileRecord.path);
+        if (!fs.existsSync(fullFilePath)) {
+            throw new NotFoundException('File not found on disk');
+        }
+
+        const buffer = fs.readFileSync(fullFilePath);
+        return { buffer, mimetype: fileRecord.mimetype };
+    }
+
     // get content of a spesific file
     getUserRequestedFiles(idUser: number, filePaths: string[]) {
         let files: any[] = [];
