@@ -22,33 +22,42 @@
 }
 
 html, body {
-
   width: 100%;
-  height: 100%;
+  height: var(--app-height, 100vh);
 
   margin: 0;
   padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
   /* display: flex; */
   /* place-items: center; */
 
 }
 
 #app {
-  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100vw;
+  height: var(--app-height, 100vh);
   margin: 0;
   padding: 0;
+  overflow: hidden;
 
   display: grid;
   grid-template-columns: clamp(150px, 20%, 200px) 1fr;
-  grid-template-rows: 100vh;
+  grid-template-rows: 100%;
   grid-template-areas:
     "menu thread"
   ;
 
-
-
   background-color: var(--bg-1);
+
+  /* Prevent grid children from overflowing on iOS Safari */
+  & > * {
+    min-height: 0;
+    min-width: 0;
+  }
 }
 
 
@@ -83,14 +92,18 @@ button:hover {
 @media screen and (max-width:500px) {
 
   #app {
-    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100vw;
+    height: var(--app-height, 100vh);
     margin: 0;
     padding: 0;
+    overflow: hidden;
 
     display: grid;
     grid-template-columns: clamp(0px, 0%, 150px) 1fr;
-    grid-template-rows: 100vh;
+    grid-template-rows: 100%;
     grid-template-areas:
       "menu thread"
     ;
@@ -101,20 +114,21 @@ button:hover {
   }
 
   .menu-expanded {
-    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100vw;
+    height: var(--app-height, 100vh);
     margin: 0;
     padding: 0;
+    overflow: hidden;
 
     display: grid;
     grid-template-columns: clamp(100px, 50%, 250px) 1fr!important;
-    grid-template-rows: 100vh;
+    grid-template-rows: 100%;
     grid-template-areas:
       "menu thread"
     ;
-
-    overflow-x: hidden;
-
 
     background-color: var(--bg-1);
   }

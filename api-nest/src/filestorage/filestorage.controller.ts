@@ -32,6 +32,21 @@ export class FilestorageController {
         }
     }
 
+    @Get('/file/:fileName')
+    getFileByName(@Session() session, @Param('fileName') fileName: string, @Res() res: Response) {
+        const idUser = session.user.idUser;
+
+        try {
+            const { buffer, mimetype } = this.fileStorageService.getUserFile(idUser, fileName);
+            res.setHeader('Content-Type', mimetype);
+            res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+            res.send(buffer);
+        } catch (err) {
+            console.error('Filestorage error while using getFileByName:', err);
+            res.status(404).send('File not found');
+        }
+    }
+
     @Post('/files')
     getFile(@Session() session, @Body('file') filePaths: string[], @Res() res: Response) {
 

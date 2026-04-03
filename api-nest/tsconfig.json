@@ -22,5 +22,6 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "rootDirs": ["./src"]
-  }
+  },
+  "exclude": ["static"] // ????
 }

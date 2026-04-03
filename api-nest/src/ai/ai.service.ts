@@ -106,15 +106,10 @@ export class AiService {
         const placeholders = threads.map((p)=>"?").join(", ");
         console.log("Placeholders:", placeholders);
 
-        // delete messages
-        db.prepare(`
-            DELETE FROM message WHERE idThread IN (${placeholders})
-        `).run(...threads); // spread your threads!
-
-        // delete threads after messages so the foreign keys don't fail
+        // cascade: deleting threads auto-deletes messages, which auto-deletes message_files
         db.prepare(`
             DELETE FROM thread WHERE idThread IN (${placeholders})
-        `).run(...threads); // spread your threads!
+        `).run(...threads);
 
         console.log("Threads "+threads+" have been deleted by "+session.user.username);
         return "Threads "+threads+" have been deleted.";
@@ -161,12 +156,61 @@ export class AiService {
         messages.forEach((message: any) => {
             const parsed = parseJsonFromString(message.data);
             if (parsed) {
+                parsed.idMessage = message.idMessage;
                 parsed.files = getFilesForMessage.all(message.idMessage);
             }
             constructedArray.push(parsed);
         });
 
         return constructedArray;
+    }
+
+    // delete a single message (must belong to a thread the user owns)
+    deleteMessage(session: any, idMessage: number) {
+        const idUser = session.user.idUser;
+        const message: any = db.prepare(
+            `SELECT m.idMessage, m.idThread FROM message m
+             JOIN thread t ON t.idThread = m.idThread
+             WHERE m.idMessage = ? AND t.author_idUser = ?`
+        ).get(idMessage, idUser);
+
+        if (!message) {
+            throw new BadRequestException('Message not found or you do not own this thread');
+        }
+
+        // delete linked files references
+        db.prepare('DELETE FROM message_files WHERE message_idMessage = ?').run(idMessage);
+
+        // Check if the preceding message in the same thread is a thinking block and delete it too
+        const thinkingMsg: any = db.prepare(
+            `SELECT idMessage, data FROM message
+             WHERE idThread = ? AND idMessage < ?
+             ORDER BY idMessage DESC LIMIT 1`
+        ).get(message.idThread, idMessage);
+
+        if (thinkingMsg) {
+            try {
+                const parsed = JSON.parse(thinkingMsg.data);
+                if (parsed && parsed.role === 'thinking') {
+                    // cascade handles message_files automatically
+                    db.prepare('DELETE FROM message WHERE idMessage = ?').run(thinkingMsg.idMessage);
+                }
+            } catch { /* data not JSON, skip */ }
+        }
+
+        // cascade handles message_files automatically
+        db.prepare('DELETE FROM message WHERE idMessage = ?').run(idMessage);
+
+        return { message: 'Message deleted' };
+    }
+
+    // delete multiple messages
+    deleteMessages(session: any, idMessages: number[]) {
+        const results: any[] = [];
+        for (const id of idMessages) {
+            results.push(this.deleteMessage(session, id));
+        }
+        return results;
     }
 
     // use model and send message to thread (fallback)

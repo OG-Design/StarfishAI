@@ -8,18 +8,24 @@ import 'highlight.js/styles/atom-one-dark.css';
 // Light theme override for highlight.js
 import '../styles/atom-one-light.css';
 
-import { aiChunks, sendPromptWithHandlers } from '../composables/useSocket';
+import { aiChunks, sendPromptWithHandlers, abortPrompt } from '../composables/useSocket';
 
 import CustomSelect from './CustomSelect.vue';
 import { type CustomSelectType } from '../types/CustomSelectType';
 const md: any = new MarkdownIt({
   highlight(code, lang) {
+    let highlighted: string;
     if (lang && hljs.getLanguage(lang)) {
       try {
-        return `<pre class="hljs"><code>${hljs.highlight(code, { language: lang, ignoreIllegals: true }).value}</code></pre>`;
-      } catch {}
+        highlighted = `<pre class="hljs"><code>${hljs.highlight(code, { language: lang, ignoreIllegals: true }).value}</code></pre>`;
+      } catch {
+        highlighted = `<pre class="hljs"><code>${md.utils.escapeHtml(code)}</code></pre>`;
+      }
+    } else {
+      highlighted = `<pre class="hljs"><code>${md.utils.escapeHtml(code)}</code></pre>`;
     }
-    return `<pre class="hljs"><code>${md.utils.escapeHtml(code)}</code></pre>`;
+    const langLabel = lang ? `<span class="code-lang-label">${md.utils.escapeHtml(lang)}</span>` : '';
+    return `<div class="code-block-wrapper">${langLabel}<button class="copy-code-btn" type="button" title="Copy code"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${highlighted}</div>`;
   }
 });
 
@@ -162,9 +168,9 @@ async function handlePrompt() {
   try {
     const res = await handleFileUpload();
     console.log(res);
-    APIFilePaths.value = res;
-    const res1 = await fetchMessageImages();
-    images.value = res1; // += ?
+    if (res) {
+      uploadedFiles = res;
+    }
   } catch (err) {
     uploadedFiles = []
     console.error('File upload failed:', err);
@@ -247,10 +253,12 @@ async function handlePrompt() {
             messages.value = [...messages.value];
           }
         },
-        onComplete() {
+        async onComplete() {
           assistantMessage.complete = true;
           isLoading.value = false;
           cleanupListeners?.();
+          // Re-fetch messages so every entry has its idMessage from the DB
+          await getAllMessages();
         },
         onError: handleError,
       }
@@ -261,6 +269,11 @@ async function handlePrompt() {
     cleanupListeners?.();
     alert("Error occurred while processing your request.\n Error: " + (err?.message ?? "Unknown error"));
   }
+}
+
+// Stop the currently running prompt
+function stopPrompt() {
+  abortPrompt();
 }
 
 // changes title of thread
@@ -408,6 +421,54 @@ function toggleThinking(message: any) {
   message._open = !message._open;
 }
 
+// Copy the raw text content of a code block (event delegation for v-html content)
+function handleThreadClick(event: Event) {
+  const target = event.target as HTMLElement;
+  const btn = target.closest('.copy-code-btn') as HTMLElement;
+  if (!btn) return;
+  const wrapper = btn.closest('.code-block-wrapper');
+  const pre = wrapper?.querySelector('pre');
+  if (pre) {
+    navigator.clipboard.writeText(pre.textContent || '');
+    const svgCopy = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+    const svgCheck = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+    btn.innerHTML = svgCheck;
+    setTimeout(() => { btn.innerHTML = svgCopy; }, 1500);
+  }
+}
+
+// Copy the full raw content of a message
+function copyMessage(event: Event, content: string) {
+  navigator.clipboard.writeText(content || '');
+  const btn = (event.currentTarget as HTMLElement);
+  const svgCopy = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+  const svgCheck = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+  btn.innerHTML = svgCheck;
+  setTimeout(() => { btn.innerHTML = svgCopy; }, 1500);
+}
+
+// Delete a message from the thread (both user and assistant)
+// Also removes the adjacent thinking block if present.
+async function deleteMessage(idMessage: number, index: number) {
+  try {
+    const res = await apiFetch('/api/ai/thread/message/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idMessage })
+    });
+    const data = await res.json();
+    console.log('Delete message result:', data);
+    // Also remove the preceding thinking block from the local array if present
+    if (index > 0 && messages.value[index - 1]?.role === 'thinking') {
+      messages.value.splice(index - 1, 2);
+    } else {
+      messages.value.splice(index, 1);
+    }
+  } catch (err) {
+    console.error('Failed to delete message:', err);
+  }
+}
+
 // store the selected model in localStorage to keep for reload and other threads.
 function handleUpdateSelectedModel(selected: CustomSelectType) {
   const found = models.value.find(m => modelKey(m) === selected.value);
@@ -428,7 +489,7 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
     </div>
 
     <!-- List of messages -->
-    <ul id="thread" ref="threadList">
+    <ul id="thread" ref="threadList" @click="handleThreadClick">
       <!-- This is the system prompt, handles the personality of the AI -->
       <template v-for="(message) in messages">
       <!-- System prompt -->
@@ -479,20 +540,23 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
                 <div class="file-text-header" @click="toggleFileContent(file)">
                   <span>{{ file.originalName }}</span>
                   <span>{{ file._open ? '▼' : '▶' }}</span>
+                  <a :href="getFileUrl(file.fileName)" :download="file.originalName" class="file-download-link" @click.stop>Download</a>
                 </div>
                 <pre v-if="file._open" class="file-text-content">{{ file._content ?? 'Loading...' }}</pre>
               </div>
               <div v-else class="file-unsupported">
                 <span>📎 {{ file.originalName }}</span>
+                <a :href="getFileUrl(file.fileName)" :download="file.originalName" class="file-download-link">Download</a>
               </div>
             </template>
           </div>
           <div class="markdown-content" v-html="md.render(message.content ?? '')"></div>
+          <div class="message-actions">
+            <button class="copy-message-btn" type="button" title="Copy message" @click="copyMessage($event, message.content)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+            <button v-if="message.idMessage" class="delete-message-btn" type="button" title="Delete message" @click="deleteMessage(message.idMessage, index)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+            <PlaySound v-if="message.role === 'assistant' && !isLoading" :textContent="message.content"/>
+          </div>
         </li>
-
-        <template v-if="message.role === 'assistant' && isLoading === false" class="play-sound-button">
-          <PlaySound :textContent="message.content"/>
-        </template>
 
       </template>
 
@@ -514,11 +578,11 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
       </select>
     </div> -->
     <!-- Prompt elements -->
-    <form id="prompt" @submit.prevent="handlePrompt">
+    <form id="prompt" @submit.prevent="isLoading ? stopPrompt() : handlePrompt()">
       <textarea type="text" name="send-message" v-model="prompt"></textarea>
       <input type="file" multiple="true" v-on:change="onFileChange">
       <div>
-        <button type="submit" :disabled="isLoading"><img class="prompt-image" :src="promptAnimationSrc" alt=""></button>
+        <button type="submit"><img class="prompt-image" :src="promptAnimationSrc" alt=""></button>
       </div>
     </form>
   </main>
@@ -593,6 +657,13 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
   }
 }
 
+.file-download-link {
+  margin-left: 1em;
+  font-size: 0.85em;
+  color: var(--md-link, #4078f2);
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 #system-prompt {
   width: calc(100% - var(--space) * 2);
@@ -663,20 +734,22 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
 #thread-main {
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 
   margin: 0;
   padding: 0;
   grid-area: thread;
+  min-height: 0;
 
   background-color: var(--bg-1);
 }
 
 #thread {
-  height: calc(100% - var(--space) * 2);
   width: calc(100% - var(--space) * 2);
+  min-height: 0;
+  flex: 1 1 0;
 
   display: flex;
   flex-direction: column;
@@ -684,6 +757,9 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
   align-items: start;
 
   overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 
   margin: var(--space);
   margin-bottom: 0;
@@ -698,7 +774,9 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
 
 #prompt {
   width: calc(100% - var(--space) );
-  height: 20%;
+  flex: 0 0 20%;
+  max-height: 20%;
+  min-height: 100px;
   background-color: var(--bg-2);
 
   display: flex;
@@ -978,7 +1056,7 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
 #model-selector {
   position: absolute;
   width: 150px;
-  bottom: 20%;
+  bottom: 25%;
   padding-left: calc(var(--space) * 2);
 
   
@@ -995,6 +1073,7 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
 
   bottom: 10rem;
   left: min(20rem, calc(50% - 75px));
+  pointer-events: none;
 }
 
 .loading-gif {
@@ -1005,6 +1084,87 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
 
 
 
+}
+
+.code-block-wrapper {
+  position: relative;
+
+  .code-lang-label {
+    position: absolute;
+    top: 0.35rem;
+    left: 0.75rem;
+    font-size: 0.7em;
+    color: var(--text-muted, #888);
+    pointer-events: none;
+    user-select: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .copy-code-btn {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    padding: 0.25rem;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted, #aaa);
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background: var(--bg-ac-1, #3a3a3a);
+      color: var(--text-1, #fff);
+    }
+  }
+}
+
+.copy-message-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted, #aaa);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+
+  &:hover {
+    background: var(--bg-ac-1, #3a3a3a);
+    color: var(--text-1, #fff);
+  }
+}
+
+.message-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: calc(var(--space) / 2);
+}
+
+.delete-message-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted, #aaa);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+
+  &:hover {
+    background: rgba(220, 53, 69, 0.15);
+    color: #dc3545;
+  }
 }
 
 // Markdown styling

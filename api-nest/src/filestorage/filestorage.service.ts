@@ -76,7 +76,7 @@ export class FilestorageService {
                 INSERT INTO file (fileName, path, mimetype, alt, originalName, user_idUser) VALUES (?, ?, ?, ?, ?, ?);
             `).run(fileName, savePath, mimetype, 'No alt', originalName, idUser);
 
-            return { path: path.join(savePath, fileName) }
+            return { idFile: Number(result.lastInsertRowid), fileName, originalName, mimetype, path: path.join(savePath, fileName) }
 
         } catch (err) {
             console.error('Error while uploading file:', err);
@@ -85,11 +85,11 @@ export class FilestorageService {
     }
 
     handleUserUploads(idUser: number, files: Express.Multer.File[], partialPath: string) {
-        let filesIndex: string[] = [];
+        let filesIndex: any[] = [];
         files.forEach( file => {
             const savePath = path.join(partialPath, file.filename)
-            this.handleUserUpload(idUser, file, savePath);
-            filesIndex.push(savePath);
+            const fileRecord = this.handleUserUpload(idUser, file, savePath);
+            filesIndex.push(fileRecord);
         });
         return { message: 'Successfully uploaded and saved files!', filesIndex };
     }

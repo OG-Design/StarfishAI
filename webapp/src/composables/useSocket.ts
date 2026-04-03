@@ -173,6 +173,13 @@ export async function sendPromptWithHandlers(
     return cleanup;
 }
 
+// Abort a running prompt stream
+export function abortPrompt(): void {
+    if (socket && socket.connected) {
+        socket.emit('abort');
+    }
+}
+
 
 // // handle the ai prompt to send
 // export function useSocket() {

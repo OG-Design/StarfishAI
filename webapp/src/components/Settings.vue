@@ -455,6 +455,7 @@ h1 {
 .fill {
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
 
     position: absolute;
     z-index: 101;

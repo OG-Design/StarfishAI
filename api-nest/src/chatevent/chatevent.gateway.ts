@@ -13,6 +13,7 @@ import db from '../db';
 import { FilestorageService } from 'src/filestorage/filestorage.service'
 
 import { checkModelExistsOnGroup } from 'src/composables/checkModelExists';
+import { isCodeFile } from 'src/composables/isCodeFile';
 
 import { Socket } from 'socket.io';
 import { Ollama } from 'ollama';
@@ -196,16 +197,7 @@ export class ChateventGateway {
             // Vision-capable models: attach as base64 image
             imageBuffers.push(buffer.toString('base64'));
 
-          } else if (
-            mimetype?.startsWith('text/') ||
-            mimetype === 'application/json' ||
-            mimetype === 'application/xml' ||
-            mimetype === 'application/javascript' ||
-            mimetype === 'application/typescript' ||
-            mimetype === 'application/x-sh' ||
-            mimetype === 'application/x-yaml' ||
-            /\.(txt|md|csv|json|xml|js|ts|py|sh|yaml|yml|html|css|env|log|sql|toml|ini|cfg)$/i.test(fileRecord.originalName)
-          ) {
+          } else if (isCodeFile(mimetype, fileRecord.originalName)) {
             // Text-based file: inject as readable context block
             const text = buffer.toString('utf-8');
             textContextParts.push(
@@ -246,6 +238,12 @@ export class ChateventGateway {
     // create new ollama and make connection via env
     const ollamaClient = new Ollama({ host: this.ollamaURL });
 
+    // Allow the client to abort the running stream
+    const abortController = new AbortController();
+    let aborted = false;
+    const onAbort = () => { aborted = true; abortController.abort(); };
+    client.once('abort', onAbort);
+
     try {
       const rawThinking = checkModelExists[0]?.thinkingLevel;
       const think = rawThinking === 'true' ? true
@@ -270,6 +268,7 @@ export class ChateventGateway {
 
       // iterate over each chunk from ollamas streaming response
       for await (const chunk of stream) {
+        if (aborted) break;
 
         const thinking = (chunk as any)?.message?.thinking ?? (chunk as any)?.thinking;
         if (thinking) {
@@ -285,6 +284,8 @@ export class ChateventGateway {
         }
       }
 
+      client.off('abort', onAbort);
+
       console.log("Thinking message response:", allThinkingChunks);
 
       console.log("Message completed at thread with author, thread + author:", thread_author);
@@ -295,16 +296,24 @@ export class ChateventGateway {
         db.prepare("INSERT INTO message (data, idThread) VALUES (?, ?)").run(JSON.stringify(thinkingMessageResponse), data.thread);
       }
 
-      // structure message
-      const messageResponse = { role: "assistant", content: allChunks.join('') };
-
-      // insert message into db
-      db.prepare("INSERT INTO message (data, idThread) VALUES (?, ?)").run(JSON.stringify(messageResponse), data.thread);
+      // Save whatever content was generated (even if aborted mid-stream)
+      const fullContent = allChunks.join('');
+      if (fullContent) {
+        const messageResponse = { role: "assistant", content: fullContent };
+        db.prepare("INSERT INTO message (data, idThread) VALUES (?, ?)").run(JSON.stringify(messageResponse), data.thread);
+      }
 
       client.emit('ai_thinking_complete');
       client.emit('ai_complete');
 
     } catch (err: any) {
+      client.off('abort', onAbort);
+      if (aborted) {
+        // User aborted — still save partial content if any
+        client.emit('ai_thinking_complete');
+        client.emit('ai_complete');
+        return;
+      }
       console.error("Ollama error:", err);
       client.emit('error', {
         message: err.error || 'Failed to process your request',
