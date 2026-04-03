@@ -46,15 +46,38 @@ CREATE TABLE IF NOT EXISTS model (
   fullName TEXT,
   thinkingLevel TEXT,
   technology TEXT,
+  modelType TEXT, -- llm, tts, img, maybe object's instead for more configuration
   FOREIGN KEY (userGroup_idUserGroup) REFERENCES userGroup(idUserGroup)
 );
 
+-- stores messsages
 CREATE TABLE IF NOT EXISTS message (
   idMessage INTEGER NOT NULL PRIMARY KEY,
   data TEXT NOT NULL,
   idThread INTEGER NOT NULL,
   isSystem INTEGER,
   latestModel_idModel INTEGER,
-  FOREIGN KEY (idThread) REFERENCES thread(idThread),
+  FOREIGN KEY (idThread) REFERENCES thread(idThread) ON DELETE CASCADE,
   FOREIGN KEY (latestModel_idModel) REFERENCES model(idModel)
+);
+
+-- stores paths and mimetype / other metadata
+CREATE TABLE IF NOT EXISTS file (
+  idFile INTEGER NOT NULL PRIMARY KEY,
+  path TEXT NOT NULL,
+  fileName TEXT,
+  mimetype TEXT,
+  alt TEXT,
+  originalName TEXT,
+  user_idUser INTEGER NOT NULL,
+  FOREIGN KEY (user_idUser) REFERENCES user(idUser)
+);
+
+-- links a file to a message in a many to many relationship many messages may have the same file, and many files may be used in one message
+CREATE TABLE IF NOT EXISTS message_files (
+  idMessage_files INTEGER NOT NULL PRIMARY KEY,
+  message_idMessage INTEGER,
+  file_idFile INTEGER NOT NULL,
+  FOREIGN KEY (message_idMessage) REFERENCES message(idMessage) ON DELETE CASCADE,
+  FOREIGN KEY (file_idFile) REFERENCES file(idFile)
 );

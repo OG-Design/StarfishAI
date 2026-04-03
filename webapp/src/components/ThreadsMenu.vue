@@ -167,6 +167,9 @@ async function handleDeleteThreads() {
     grid-area: menu;
     overflow-y: scroll;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
 
     box-shadow: var(--shadow);
     z-index: 100;

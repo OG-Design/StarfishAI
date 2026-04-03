@@ -54,6 +54,16 @@ export class AiController {
         return this.aiService.getMessages(session, thread);
     }
 
+    @Post('thread/message/delete')
+    deleteMessage(@Session() session: Record<string, any>, @Body('idMessage') idMessage: number) {
+        return this.aiService.deleteMessage(session, idMessage);
+    }
+
+    @Post('thread/messages/delete')
+    deleteMessages(@Session() session: Record<string, any>, @Body('idMessages') idMessages: number[]) {
+        return this.aiService.deleteMessages(session, idMessages);
+    }
+
     @Post('chat')
     async useModel(@Body() body:{model: string, message: string, thread: number}, @Session() session: Record<string, any>) {
         return await this.aiService.useModel(body.model, body.message, body.thread, session);

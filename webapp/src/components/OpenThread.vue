@@ -8,26 +8,32 @@ import 'highlight.js/styles/atom-one-dark.css';
 // Light theme override for highlight.js
 import '../styles/atom-one-light.css';
 
-import { sendPrompt, aiChunks, socket, connectSocket } from '../composables/useSocket';
+import { aiChunks, sendPromptWithHandlers, abortPrompt } from '../composables/useSocket';
 
 import CustomSelect from './CustomSelect.vue';
 import { type CustomSelectType } from '../types/CustomSelectType';
 const md: any = new MarkdownIt({
   highlight(code, lang) {
+    let highlighted: string;
     if (lang && hljs.getLanguage(lang)) {
       try {
-        return `<pre class="hljs"><code>${hljs.highlight(code, { language: lang, ignoreIllegals: true }).value}</code></pre>`;
-      } catch {}
+        highlighted = `<pre class="hljs"><code>${hljs.highlight(code, { language: lang, ignoreIllegals: true }).value}</code></pre>`;
+      } catch {
+        highlighted = `<pre class="hljs"><code>${md.utils.escapeHtml(code)}</code></pre>`;
+      }
+    } else {
+      highlighted = `<pre class="hljs"><code>${md.utils.escapeHtml(code)}</code></pre>`;
     }
-    return `<pre class="hljs"><code>${md.utils.escapeHtml(code)}</code></pre>`;
+    const langLabel = lang ? `<span class="code-lang-label">${md.utils.escapeHtml(lang)}</span>` : '';
+    return `<div class="code-block-wrapper">${langLabel}<button class="copy-code-btn" type="button" title="Copy code"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${highlighted}</div>`;
   }
 });
 
 const props = defineProps<{title: string, index: number, idThread: number, models: any[]}>();
 
 import type { ModelOption } from '../types/ModelOption';
-import { apiFetch } from '../composables/useApi';
-
+import { apiFetch, apiBase } from '../composables/useApi';
+import PlaySound from './PlaySound.vue';
 
 const isElectron = typeof window !== "undefined" && window.location.protocol === "file:";
 const assetBase = isElectron ? './animation/' : '/animation';
@@ -151,43 +157,31 @@ async function getAllMessages() {
 const prompt = ref(null);
 
 
-// sends a prompt and awaits the response
-// async function handlePromptFallback() {
-//   isLoading.value = true;
-//   const body = {
-//     model: "llama3",
-//     message: {
-//       role: "user",
-//       content: prompt.value
-//     },
-//     thread: props.idThread
-//   }
-//   const res = await fetch('/api/ai/chat', {
-//     method: "POST",
-//     headers: {
-//         'Content-Type':'application/json'
-//     },
-//     body: JSON.stringify(body)
-//   })
-
-//   getAllMessages();
-
-//   console.log(await res);
-
-//   isLoading.value = false;
-
-// }
-
 // joins the chunks currently done.
 const currentMessage = computed(()=>aiChunks.value.join(''));
 
 // handles the users prompt and refreshes messages in the open thread
 async function handlePrompt() {
 
+  let uploadedFiles: any[] = [];
+
+  try {
+    const res = await handleFileUpload();
+    console.log(res);
+    if (res) {
+      uploadedFiles = res;
+    }
+  } catch (err) {
+    uploadedFiles = []
+    console.error('File upload failed:', err);
+  }
+  refFiles.value = [];
+
+
   if (!currentModel.value) return console.log("No model selected"); // check if current model exists
 
   // Structure the user message
-  const message = { role: "user", content: prompt.value };
+  const message: any = { role: "user", content: prompt.value, files: uploadedFiles };
 
   // Add the prompt message to the messages array immediately
   messages.value.push(message);
@@ -213,99 +207,73 @@ async function handlePrompt() {
   let assistantMessage = { role: 'assistant', content: '', complete: false };
   messages.value.push(assistantMessage);
 
-  const cleanupListeners = () => {
-    socket?.off('ai_chunk', handleChunk);
-    socket?.off('ai_thinking_chunk', handleThinkingChunk);
-    socket?.off('ai_thinking_complete', handleThinkingComplete);
-    socket?.off('ai_complete', handleComplete);
-    socket?.off('error', handleError);
-    socket?.off('connect_error', handleConnectError);
-  };
-
-  // Handle thinking stream chunks — insert a thinking placeholder before the assistant message on first chunk
-  const handleThinkingChunk = (chunk: string) => {
-    if (!thinkingMessage) {
-      thinkingMessage = { role: 'thinking', content: '', complete: false, _open: true };
-      const assistantIdx = messages.value.indexOf(assistantMessage);
-      messages.value.splice(assistantIdx, 0, thinkingMessage);
-    }
-    thinkingMessage.content += chunk;
-    messages.value = [...messages.value];
-    scrollToBottom();
-  };
-
-  const handleThinkingComplete = () => {
-    if (thinkingMessage) {
-      thinkingMessage.complete = true;
-      messages.value = [...messages.value];
-    }
-  };
-
-  // Handle WebSocket events
-  const handleChunk = (chunk: any) => {
-    // Append the chunk to the assistant's message content
-    assistantMessage.content += chunk;
-
-    // Trigger Vue reactivity for the messages array
-    messages.value = [...messages.value];
-
-    // Scroll to the bottom of the thread
-    scrollToBottom();
-  };
-
-  const handleComplete = () => {
-    // Mark the assistant message as complete
-    assistantMessage.complete = true;
-
-    // Set loading state to false
-    isLoading.value = false;
-
-    // Clean up listeners
-    cleanupListeners();
-  };
+  let cleanupListeners: (() => void) | null = null;
 
   const handleError = (err: any) => {
     console.error("Socket error:", err);
     isLoading.value = false;
-    cleanupListeners();
+    cleanupListeners?.();
     alert("Error occurred while processing your request.\n Error: " + (err?.message ?? "Unknown error"));
   };
 
-  const handleConnectError = (err: any) => {
-    console.error("Connection error:", err);
-    isLoading.value = false;
-    cleanupListeners();
-    alert("Connection error occurred");
-  };
-
   try {
-    await connectSocket();
-    if (!socket) {
-      throw new Error('Socket not connected');
-    }
-
-    // Set up WebSocket listeners before emitting prompt to avoid missing fast error responses.
-    socket.on('ai_chunk', handleChunk);
-    socket.on('ai_thinking_chunk', handleThinkingChunk);
-    socket.once('ai_thinking_complete', handleThinkingComplete);
-    socket.once('ai_complete', handleComplete);
-    socket.once('error', handleError);
-    socket.once('connect_error', handleConnectError);
-
     console.log("currentModel:", currentModel.value);
 
-    // Send the prompt via WebSocket
     const idGroup = Number((currentModel.value as any).idGroup ?? (currentModel.value as any).idUserGroup);
     if (!idGroup) {
       throw new Error('Model group id is missing. Re-select the model in Settings.');
     }
-    await sendPrompt(props.idThread, message, { modelFullName: currentModel.value.modelFullName, thinkingLevel: (currentModel.value as any).thinking }, idGroup);
+    const fileIds = uploadedFiles.map((f: any) => f.idFile);
+
+    cleanupListeners = await sendPromptWithHandlers(
+      props.idThread,
+      message,
+      { modelFullName: currentModel.value.modelFullName, thinkingLevel: (currentModel.value as any).thinking },
+      fileIds,
+      idGroup,
+      {
+        onChunk(chunk) {
+          assistantMessage.content += chunk;
+          messages.value = [...messages.value];
+          scrollToBottom();
+        },
+        onThinkingChunk(chunk) {
+          if (!thinkingMessage) {
+            thinkingMessage = { role: 'thinking', content: '', complete: false, _open: true };
+            const assistantIdx = messages.value.indexOf(assistantMessage);
+            messages.value.splice(assistantIdx, 0, thinkingMessage);
+          }
+          thinkingMessage.content += chunk;
+          messages.value = [...messages.value];
+          scrollToBottom();
+        },
+        onThinkingComplete() {
+          if (thinkingMessage) {
+            thinkingMessage.complete = true;
+            messages.value = [...messages.value];
+          }
+        },
+        async onComplete() {
+          assistantMessage.complete = true;
+          isLoading.value = false;
+          cleanupListeners?.();
+          // Re-fetch messages so every entry has its idMessage from the DB
+          await getAllMessages();
+        },
+        onError: handleError,
+      }
+    );
   } catch (err: any) {
     console.error('Failed to send prompt:', err);
     isLoading.value = false;
-    cleanupListeners();
+    cleanupListeners?.();
     alert("Error occurred while processing your request.\n Error: " + (err?.message ?? "Unknown error"));
   }
+}
+
+// Stop the currently running prompt
+function stopPrompt() {
+  abortPrompt();
 }
 
 // changes title of thread
@@ -338,6 +306,80 @@ async function handleThreadChange() {
 
 }
 
+const refFiles = ref<File[]>([]);
+const APIFilePaths = ref<string[]>();
+
+function onFileChange(event: Event) {
+  const target = event?.target as HTMLInputElement;
+  if (target.files && target.files.length > 0) {
+    refFiles.value = Array.from(target.files);
+  }
+
+  console.log("onFileChange files:", refFiles.value);
+}
+
+function getFileUrl(fileName: string) {
+  const base = isElectron ? apiBase.value : '';
+  return `${base}/api/filestorage/file/${encodeURIComponent(fileName)}`;
+}
+
+async function toggleFileContent(file: any) {
+  file._open = !file._open;
+  if (file._open && !file._content) {
+    try {
+      const res = await apiFetch(`/api/filestorage/file/${encodeURIComponent(file.fileName)}`);
+      file._content = await res.text();
+    } catch {
+      file._content = 'Failed to load file content';
+    }
+  }
+}
+
+async function handleFileUpload() {
+
+  if (refFiles.value.length === 0) {
+    return;
+  }
+
+  const formData = new FormData();
+
+  refFiles.value.forEach(file => {
+    formData.append('files', file);
+  })
+
+  const res = await apiFetch('/api/filestorage/upload', {
+    method: 'POST',
+    body: formData
+  });
+
+  const data = await res.json();
+  console.log('File upload result:', data);
+
+  return data.filesIndex;
+}
+
+const images = ref();
+async function fetchMessageImages() {
+  
+  const body = {
+    filePaths: APIFilePaths.value
+  };
+
+  const res = await apiFetch('/api/filestorage/files', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/octet-stream'
+    }, 
+    body: JSON.stringify(body)
+  });  
+
+  const data = await res.json();
+
+  console.log('res from fetchMessageImages:', data)
+  
+  return data;
+
+}
 
 // sends the personality e.g the system prompt to the API
 async function handlePersonalityChange() {
@@ -379,6 +421,54 @@ function toggleThinking(message: any) {
   message._open = !message._open;
 }
 
+// Copy the raw text content of a code block (event delegation for v-html content)
+function handleThreadClick(event: Event) {
+  const target = event.target as HTMLElement;
+  const btn = target.closest('.copy-code-btn') as HTMLElement;
+  if (!btn) return;
+  const wrapper = btn.closest('.code-block-wrapper');
+  const pre = wrapper?.querySelector('pre');
+  if (pre) {
+    navigator.clipboard.writeText(pre.textContent || '');
+    const svgCopy = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+    const svgCheck = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+    btn.innerHTML = svgCheck;
+    setTimeout(() => { btn.innerHTML = svgCopy; }, 1500);
+  }
+}
+
+// Copy the full raw content of a message
+function copyMessage(event: Event, content: string) {
+  navigator.clipboard.writeText(content || '');
+  const btn = (event.currentTarget as HTMLElement);
+  const svgCopy = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+  const svgCheck = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+  btn.innerHTML = svgCheck;
+  setTimeout(() => { btn.innerHTML = svgCopy; }, 1500);
+}
+
+// Delete a message from the thread (both user and assistant)
+// Also removes the adjacent thinking block if present.
+async function deleteMessage(idMessage: number, index: number) {
+  try {
+    const res = await apiFetch('/api/ai/thread/message/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idMessage })
+    });
+    const data = await res.json();
+    console.log('Delete message result:', data);
+    // Also remove the preceding thinking block from the local array if present
+    if (index > 0 && messages.value[index - 1]?.role === 'thinking') {
+      messages.value.splice(index - 1, 2);
+    } else {
+      messages.value.splice(index, 1);
+    }
+  } catch (err) {
+    console.error('Failed to delete message:', err);
+  }
+}
+
 // store the selected model in localStorage to keep for reload and other threads.
 function handleUpdateSelectedModel(selected: CustomSelectType) {
   const found = models.value.find(m => modelKey(m) === selected.value);
@@ -399,7 +489,7 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
     </div>
 
     <!-- List of messages -->
-    <ul id="thread" ref="threadList">
+    <ul id="thread" ref="threadList" @click="handleThreadClick">
       <!-- This is the system prompt, handles the personality of the AI -->
       <template v-for="(message) in messages">
       <!-- System prompt -->
@@ -415,6 +505,8 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
 
       <!-- Prints all previous messages -->
       <template v-for="(message, index) in messages" :key="index">
+
+
 
         <!-- Thinking block: collapsible, open while streaming or if it is the latest thinking message -->
         <li v-if="message.role === 'thinking'" class="thinking-block">
@@ -435,10 +527,36 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
         <!-- User / assistant messages -->
         <li
           v-else
-          class="message markdown-content"
+          class="message"
           :class="{'message-user': message.role === 'user'}"
-          v-html="md.render(message.content ?? '')"
-        ></li>
+        >
+          <div v-if="message.files && message.files.length" class="message-files">
+            <template v-for="file in message.files" :key="file.idFile">
+              <img v-if="file.mimetype && file.mimetype.startsWith('image/')"
+                   :src="getFileUrl(file.fileName)"
+                   :alt="file.originalName"
+                   class="file-preview-image" />
+              <div v-else-if="file.mimetype && file.mimetype.startsWith('text/')" class="file-text-block">
+                <div class="file-text-header" @click="toggleFileContent(file)">
+                  <span>{{ file.originalName }}</span>
+                  <span>{{ file._open ? '▼' : '▶' }}</span>
+                  <a :href="getFileUrl(file.fileName)" :download="file.originalName" class="file-download-link" @click.stop>Download</a>
+                </div>
+                <pre v-if="file._open" class="file-text-content">{{ file._content ?? 'Loading...' }}</pre>
+              </div>
+              <div v-else class="file-unsupported">
+                <span>📎 {{ file.originalName }}</span>
+                <a :href="getFileUrl(file.fileName)" :download="file.originalName" class="file-download-link">Download</a>
+              </div>
+            </template>
+          </div>
+          <div class="markdown-content" v-html="md.render(message.content ?? '')"></div>
+          <div class="message-actions">
+            <button class="copy-message-btn" type="button" title="Copy message" @click="copyMessage($event, message.content)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+            <button v-if="message.idMessage" class="delete-message-btn" type="button" title="Delete message" @click="deleteMessage(message.idMessage, index)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+            <PlaySound v-if="message.role === 'assistant' && !isLoading" :textContent="message.content"/>
+          </div>
+        </li>
 
       </template>
 
@@ -460,10 +578,11 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
       </select>
     </div> -->
     <!-- Prompt elements -->
-    <form id="prompt" @submit.prevent="handlePrompt">
+    <form id="prompt" @submit.prevent="isLoading ? stopPrompt() : handlePrompt()">
       <textarea type="text" name="send-message" v-model="prompt"></textarea>
+      <input type="file" multiple="true" v-on:change="onFileChange">
       <div>
-        <button type="submit" :disabled="isLoading"><img class="prompt-image" :src="promptAnimationSrc" alt=""></button>
+        <button type="submit"><img class="prompt-image" :src="promptAnimationSrc" alt=""></button>
       </div>
     </form>
   </main>
@@ -538,6 +657,13 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
   }
 }
 
+.file-download-link {
+  margin-left: 1em;
+  font-size: 0.85em;
+  color: var(--md-link, #4078f2);
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 #system-prompt {
   width: calc(100% - var(--space) * 2);
@@ -608,20 +734,22 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
 #thread-main {
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 
   margin: 0;
   padding: 0;
   grid-area: thread;
+  min-height: 0;
 
   background-color: var(--bg-1);
 }
 
 #thread {
-  height: calc(100% - var(--space) * 2);
   width: calc(100% - var(--space) * 2);
+  min-height: 0;
+  flex: 1 1 0;
 
   display: flex;
   flex-direction: column;
@@ -629,6 +757,9 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
   align-items: start;
 
   overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 
   margin: var(--space);
   margin-bottom: 0;
@@ -643,7 +774,9 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
 
 #prompt {
   width: calc(100% - var(--space) );
-  height: 20%;
+  flex: 0 0 20%;
+  max-height: 20%;
+  min-height: 100px;
   background-color: var(--bg-2);
 
   display: flex;
@@ -783,6 +916,62 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
   border: 1px solid var(--key-2);
 }
 
+.message-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) / 2);
+  margin-bottom: calc(var(--space) / 2);
+}
+
+.file-preview-image {
+  max-width: 300px;
+  max-height: 300px;
+  border-radius: calc(var(--border-radius) / 2);
+  object-fit: contain;
+}
+
+.file-text-block {
+  width: 100%;
+  border: 1px solid var(--border-1);
+  border-radius: calc(var(--border-radius) / 2);
+  overflow: hidden;
+}
+
+.file-text-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(var(--space) / 2) var(--space);
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.85em;
+  color: var(--text-muted);
+
+  &:hover {
+    background-color: var(--bg-ac-1);
+  }
+}
+
+.file-text-content {
+  max-height: 300px;
+  overflow: auto;
+  padding: var(--space);
+  margin: 0;
+  font-size: 0.85em;
+  background-color: var(--bg-ac-1);
+  border-top: 1px solid var(--border-1);
+}
+
+.file-unsupported {
+  display: flex;
+  align-items: center;
+  padding: calc(var(--space) / 2) var(--space);
+  font-size: 0.85em;
+  color: var(--text-muted);
+  background-color: var(--bg-ac-1);
+  border-radius: calc(var(--border-radius) / 2);
+}
+
 .thinking-block {
   min-width: 0;
   max-width: 70%;
@@ -867,7 +1056,7 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
 #model-selector {
   position: absolute;
   width: 150px;
-  bottom: 20%;
+  bottom: 25%;
   padding-left: calc(var(--space) * 2);
 
   
@@ -884,6 +1073,7 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
 
   bottom: 10rem;
   left: min(20rem, calc(50% - 75px));
+  pointer-events: none;
 }
 
 .loading-gif {
@@ -894,6 +1084,87 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
 
 
 
+}
+
+.code-block-wrapper {
+  position: relative;
+
+  .code-lang-label {
+    position: absolute;
+    top: 0.35rem;
+    left: 0.75rem;
+    font-size: 0.7em;
+    color: var(--text-muted, #888);
+    pointer-events: none;
+    user-select: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .copy-code-btn {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    padding: 0.25rem;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted, #aaa);
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background: var(--bg-ac-1, #3a3a3a);
+      color: var(--text-1, #fff);
+    }
+  }
+}
+
+.copy-message-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted, #aaa);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+
+  &:hover {
+    background: var(--bg-ac-1, #3a3a3a);
+    color: var(--text-1, #fff);
+  }
+}
+
+.message-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: calc(var(--space) / 2);
+}
+
+.delete-message-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted, #aaa);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+
+  &:hover {
+    background: rgba(220, 53, 69, 0.15);
+    color: #dc3545;
+  }
 }
 
 // Markdown styling

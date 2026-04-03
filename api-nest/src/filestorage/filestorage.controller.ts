@@ -1,0 +1,90 @@
+import { Controller, Get, Param, UseGuards, Res, Post, UseInterceptors, UploadedFile, Session, UploadedFiles, Body } from '@nestjs/common';
+
+import type { Response } from 'express';
+
+import { FilestorageService } from './filestorage.service';
+
+import { UserFileGuard } from './filestorage.guard';
+import { FilesInterceptor } from '@nestjs/platform-express';
+
+import { diskStorage } from 'multer';
+
+import { v4 as uuidv4 } from 'uuid';
+
+import path from 'path';
+
+import fs from 'fs';
+import session from 'express-session';
+
+@Controller('filestorage')
+// @UseGuards(UserFileGuard)
+export class FilestorageController {
+    constructor (private fileStorageService: FilestorageService) {}
+
+
+    @Get(':user')
+    getFileIndex(@Param('user') idUser: number) {
+        try {
+            const files = this.fileStorageService.getUserFileIndex(idUser);
+            return files;
+        } catch (err) {
+            console.error("Filestorage error while using getFileIndex:", err);
+        }
+    }
+
+    @Get('/file/:fileName')
+    getFileByName(@Session() session, @Param('fileName') fileName: string, @Res() res: Response) {
+        const idUser = session.user.idUser;
+
+        try {
+            const { buffer, mimetype } = this.fileStorageService.getUserFile(idUser, fileName);
+            res.setHeader('Content-Type', mimetype);
+            res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+            res.send(buffer);
+        } catch (err) {
+            console.error('Filestorage error while using getFileByName:', err);
+            res.status(404).send('File not found');
+        }
+    }
+
+    @Post('/files')
+    getFile(@Session() session, @Body('file') filePaths: string[], @Res() res: Response) {
+
+        const idUser = session.user.idUser;
+
+        console.log('getting file for user:', idUser);
+
+        try {
+            const file = this.fileStorageService.getUserRequestedFiles(idUser, filePaths);
+            res.setHeader('Content-Type', 'application/octet-stream');
+            res.send(file);
+        } catch (err) {
+            console.error('Filestorage error while using getFile:', err);
+            res.status(404).send('File not found');
+        }
+    }
+
+    @Post('/upload')
+    @UseInterceptors(FilesInterceptor('files', 10, {
+        storage: diskStorage({
+            destination: (req: any, file: any, cb: any) => {
+                const idUser = req.session.user.idUser;
+                if (!idUser || !req.session || !req.session.user) {
+                    return cb(new Error('User not authenticated'));
+                }
+                const uploadPath = path.join(__dirname, '../../', 'static/user-assets', String(idUser));
+                if(!fs.existsSync(uploadPath)) {
+                    fs.mkdirSync(uploadPath, {recursive: true});
+                }
+                cb(null, uploadPath);
+            },
+            filename: (req: any, file: any, cb: any) => {
+                const ext = path.extname(file.originalname);
+                cb(null, `${uuidv4()}${ext}`);
+            }
+        })
+    }))
+    uploadFiles(@Session() session, @UploadedFiles() file: Express.Multer.File[], ) {
+        return this.fileStorageService.handleUserUploads(session.user.idUser, file, path.join('static/user-assets', String(session.user.idUser)));
+    }
+}
