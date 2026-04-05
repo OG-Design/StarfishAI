@@ -1090,7 +1090,7 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
   position: relative;
 
   .code-lang-label {
-    position: absolute;
+    position: static;
     top: 0.35rem;
     left: 0.75rem;
     font-size: 0.7em;
