@@ -1,6 +1,10 @@
 {
     "scripts": {
-        "sync:env": "cd webapp && sync.env.bat",
+        "sync:env": "sync.env.bat",
+        "docker:build:appimage":"docker image build --no-cache -f ./app-compose/Dockerfile -t starfishai-appimage .",
+        "docker:run:appimage":"docker run --rm -it starfishai-appimage sh",
+        "docker:run:app-compose":"npm run sync:env && docker-compose -f ./app-compose/docker-compose.yml up --build",
+        "docker:run:all": "docker-compose up",
         "docker:pull:ollama": "docker --context desktop-linux pull ollama/ollama:latest",
         "docker:pull:redis": "docker --context desktop-linux pull redis:latest",
         "docker:up:redis": "cd redis && docker --context desktop-linux compose up -d",

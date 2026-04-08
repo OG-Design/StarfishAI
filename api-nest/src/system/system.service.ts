@@ -10,11 +10,19 @@ import * as path from 'path';
 import { exec } from 'child_process';
 import { stderr, stdout } from 'process';
 
+
+
 @Injectable()
 export class SystemService {
+
     constructor() {
         this.ollamaPath=path.join(process.cwd(), '../', 'ollama', 'docker-compose.yml');
-        this.ollamaConfig = yaml.load(fs.readFileSync(this.ollamaPath), 'utf-8');
+        if (fs.existsSync(this.ollamaPath)) {
+            this.ollamaConfig = yaml.load(fs.readFileSync(this.ollamaPath, 'utf-8'));
+        } else {
+            console.warn(`Ollama compose file not found at ${this.ollamaPath}, skipping config load.`);
+            this.ollamaConfig = null;
+        }
         this.presets = settings.api.systemSettings['compose-ollama'].presets;
     }
     private readonly ollamaPath: string;
