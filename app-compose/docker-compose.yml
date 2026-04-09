@@ -13,8 +13,12 @@ services:
         REDIS_PORT: ${REDIS_PORT}
         USED_AS_REMOTE: ${USED_AS_REMOTE}
         VITE_API_URL: ${VITE_API_URL}
+        VITE_SECURE: ${VITE_SECURE}
+        VITE_HOST: ${VITE_HOST}
         ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
         ELECTRON_MODE: ${ELECTRON_MODE}
+        SECURE: ${SECURE}
+        HOST: ${HOST}
         # JWT_SECRET, SESSION_SECRET, and DB_PATH are set at runtime via env_file/environment
     env_file:
       - .env
@@ -30,21 +34,25 @@ services:
       - REDIS_PORT
       - USED_AS_REMOTE
       - VITE_API_URL
+      - VITE_SECURE
+      - VITE_HOST
       - ALLOWED_ORIGINS
       - ELECTRON_MODE
+      - SECURE
+      - HOST
       - JWT_SECRET
       - SESSION_SECRET
       - DB_PATH
     volumes:
-      - starfish-db-data:/StarfishAI/db:rw # using sqlite
-      - starfish-static-data:/StarfishAI/static:rw
+      - starfishai-db-data:/StarfishAI/db:rw # using sqlite
+      - starfishai-static-data:/StarfishAI/static:rw
     ports:
       - "${API_PORT}:${API_PORT}"
     networks:
       - starfish-network
 volumes:
-  starfish-db-data:
-  starfish-static-data:
+  starfishai-db-data:
+  starfishai-static-data:
 networks:
   starfish-network:
     name: starfish-network

@@ -2,7 +2,7 @@ include:
   - path: ./ollama/docker-compose.yml
   - path: ./redis/docker-compose.yml
   - path: ./app-compose/docker-compose.yml
-
+  - path: ./proxy/docker-compose.yml
 networks:
   starfish-network:
     name: starfish-network

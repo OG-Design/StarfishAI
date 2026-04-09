@@ -8,8 +8,9 @@ import * as jwt from 'jsonwebtoken';
 import { secretJWT } from 'src/secretJWT';
 import { randomUUID } from 'crypto';
 
+const isSecure = process.env.SECURE === 'true';
+
 function cookieOptions(req: Request, maxAge: number) {
-    const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     const origin = req.headers.origin || '';
     const host = req.headers.host || '';
     // Cross-origin if Origin is present and doesn't match the backend host

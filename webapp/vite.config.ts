@@ -5,6 +5,8 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig(({mode})=>{
   const env = loadEnv(mode, process.cwd()+"../");
   const API_URL = env.VITE_API_URL || "http://localhost:3000" ; // Double check
+  const wsProtocol = env.VITE_SECURE === 'true' ? 'wss' : 'ws';
+  const httpProtocol = env.VITE_SECURE === 'true' ? 'https' : 'http';
   return {
     plugins: [vue()],
     base:"./",
@@ -27,12 +29,14 @@ export default defineConfig(({mode})=>{
         '/api': {
           target: API_URL,
           changeOrigin: true,
+          secure: env.VITE_SECURE === 'true',
           // rewrite: (path) => path.replace(/^\/api/, '')
         },
         '/socket.io': {
         target: API_URL,
         ws: true,
-        changeOrigin: true
+        changeOrigin: true,
+        secure: env.VITE_SECURE === 'true',
         }
       },
 

@@ -5,7 +5,7 @@ services:
     ports:
       - '11434:11434'
     volumes:
-      - ollama_data:/root/.ollama
+      - starfishai-ollama-data:/root/.ollama
     restart: unless-stopped
     deploy:
       resources:
@@ -21,7 +21,7 @@ services:
     networks:
       - starfish-network
 volumes:
-  ollama_data: null
+  starfishai-ollama-data: null
 networks:
   starfish-network:
     name: starfish-network

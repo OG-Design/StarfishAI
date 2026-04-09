@@ -120,3 +120,79 @@ docker-compose up -d
 ## webapp
 
 [Link to webapp documentation](./webapp/README.md)
+
+---
+
+## HTTPS / SSL Configuration
+
+The project supports both HTTP and HTTPS. This is controlled by the `SECURE` and `HOST` variables in your `.env` files.
+
+### HTTP (default for development)
+
+No extra setup needed. With `SECURE=false` in `.env`, everything runs over plain HTTP:
+
+```env
+SECURE=false
+HOST=localhost
+VITE_SECURE=false
+VITE_HOST=localhost
+VITE_API_URL=http://localhost:3000
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+```
+
+Access the app at `http://localhost`.
+
+### HTTPS
+
+1. **Generate or provide SSL certificates**
+
+   Place `cert.pem` and `key.pem` in [`proxy/nginx-volume/ssl/`](./proxy/nginx-volume/ssl/). See the [SSL README](./proxy/nginx-volume/ssl/README.md) for generation instructions.
+
+   Quick self-signed cert (Linux/macOS):
+   ```bash
+   cd proxy/nginx-volume/ssl
+   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+     -keyout key.pem -out cert.pem -subj "/CN=localhost"
+   ```
+
+   Windows (PowerShell, requires Git):
+   ```powershell
+   cd proxy\nginx-volume\ssl
+   & "C:\Program Files\Git\usr\bin\openssl.exe" req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem -subj "/CN=localhost"
+   ```
+
+2. **Update `.env`**
+
+   ```env
+   SECURE=true
+   HOST=localhost          # or your domain
+   VITE_SECURE=true
+   VITE_HOST=localhost
+   VITE_API_URL=https://localhost
+   ALLOWED_ORIGINS=https://localhost,http://localhost:5173,http://localhost:3000
+   ```
+
+3. **Restart the stack**
+
+   ```bash
+   npm run docker:restart
+   ```
+
+   Or stop and start separately:
+   ```bash
+   npm run docker:stop
+   npm run docker:run:all
+   ```
+
+   Nginx will serve HTTPS on ports **443** and **444** alongside HTTP on port **80**.
+
+> **Note:** Browsers will show a certificate warning for self-signed certs — this is expected in development. For production, use certificates from a trusted CA (e.g. Let's Encrypt).
+
+### What `SECURE` controls
+
+| Component | `SECURE=false` | `SECURE=true` |
+|-----------|---------------|--------------|
+| **Session cookies** | `secure: false`, `sameSite: lax` | `secure: true`, `sameSite: lax` (or `none` for cross-origin) |
+| **JWT / refresh cookies** | `secure: false` | `secure: true` |
+| **Nginx** | HTTP only (port 80) | HTTP (80) + HTTPS (443, 444) |
+| **WebSocket** | `ws://` | `wss://` (automatic) |

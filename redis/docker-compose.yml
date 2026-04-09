@@ -6,12 +6,12 @@ services:
       - "6379:6379"
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
-      - redis-data:/data
+      - starfishai-redis-data:/data
     networks:
       - starfish-network
 
 volumes:
-  redis-data:
+  starfishai-redis-data:
 networks:
   starfish-network:
     name: starfish-network
