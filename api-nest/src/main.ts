@@ -21,6 +21,8 @@ async function bootstrap() {
 
   console.log("NODE_ENV", process.env.NODE_ENV);
   console.log("API_PORT", configService.get('API_PORT'));
+  console.log("SECURE", configService.get('SECURE'));
+  console.log("HOST", configService.get('HOST'));
 
   const allowedOrigins = (configService.get<string>('ALLOWED_ORIGINS') ?? '').split(',').map(s => s.trim()).filter(Boolean);
   const allowAll = allowedOrigins.includes('*');

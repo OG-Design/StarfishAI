@@ -18,6 +18,8 @@ import { join } from 'path';
 import { FilestorageService } from './filestorage/filestorage.service';
 import { FilestorageModule } from './filestorage/filestorage.module';
 import { FilestorageController } from './filestorage/filestorage.controller';
+import { SystemModule } from './system/system.module';
+
 
 @Module({
   imports: [
@@ -42,8 +44,9 @@ import { FilestorageController } from './filestorage/filestorage.controller';
       exclude: ['/api/{*path}', '/socket.io/{*path}'],
     }),
     FilestorageModule,
+    SystemModule.register(),
   ],
-  controllers: [AppController, UserController, AuthController, AiController, SystemController],
-  providers: [AppService, UserService, AuthService, AiService, ChateventGateway, SystemService, FilestorageService],
+  controllers: [AppController, UserController, AuthController, AiController],
+  providers: [AppService, UserService, AuthService, AiService, ChateventGateway, FilestorageService],
 })
 export class AppModule {}

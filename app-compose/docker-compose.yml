@@ -1,0 +1,58 @@
+services:
+  webapp:
+    image: starfishai-appimage
+    build:
+      context: .. # project root
+      dockerfile: ./app-compose/Dockerfile
+      args:
+        APP_ENV: ${APP_ENV}
+        API_PORT: ${API_PORT}
+        OLLAMA_URL: ${OLLAMA_URL}
+        REDIS_URL: ${REDIS_URL}
+        OLLAMA_PORT: ${OLLAMA_PORT}
+        REDIS_PORT: ${REDIS_PORT}
+        USED_AS_REMOTE: ${USED_AS_REMOTE}
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_SECURE: ${VITE_SECURE}
+        VITE_HOST: ${VITE_HOST}
+        ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+        ELECTRON_MODE: ${ELECTRON_MODE}
+        SECURE: ${SECURE}
+        HOST: ${HOST}
+        # JWT_SECRET, SESSION_SECRET, and DB_PATH are set at runtime via env_file/environment
+    env_file:
+      - .env
+      - .env.production
+      - .env.secret
+      - .env.secret.production
+    environment:
+      - APP_ENV
+      - API_PORT
+      - OLLAMA_URL
+      - REDIS_URL
+      - OLLAMA_PORT
+      - REDIS_PORT
+      - USED_AS_REMOTE
+      - VITE_API_URL
+      - VITE_SECURE
+      - VITE_HOST
+      - ALLOWED_ORIGINS
+      - ELECTRON_MODE
+      - SECURE
+      - HOST
+      - JWT_SECRET
+      - SESSION_SECRET
+      - DB_PATH
+    volumes:
+      - starfishai-db-data:/StarfishAI/db:rw # using sqlite
+      - starfishai-static-data:/StarfishAI/static:rw
+    ports:
+      - "${API_PORT}:${API_PORT}"
+    networks:
+      - starfish-network
+volumes:
+  starfishai-db-data:
+  starfishai-static-data:
+networks:
+  starfish-network:
+    name: starfish-network

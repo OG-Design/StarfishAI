@@ -1,0 +1,23 @@
+services:
+  nginx:
+    image: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+      - "444:444"
+    volumes:
+      - ./nginx-volume/templates:/etc/nginx/templates:ro
+      - ./nginx-volume/entrypoint.d/25-generate-ssl.sh:/docker-entrypoint.d/25-generate-ssl.sh:ro
+      - ./nginx-volume/ssl:/etc/nginx/ssl:ro
+    environment:
+      - API_PORT=${API_PORT}
+      - SECURE=${SECURE:-false}
+      - NGINX_ENVSUBST_TEMPLATE_VARS=API_PORT
+    networks:
+      - starfish-network
+    depends_on:
+      - webapp
+
+networks:
+  starfish-network:
+    name: starfish-network

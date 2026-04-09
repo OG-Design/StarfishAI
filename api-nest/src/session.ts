@@ -1,18 +1,19 @@
 import session from 'express-session';
 
+const isSecure = process.env.SECURE === 'true';
+
 export const sessionMiddleware = session({
-    secret: "starfish-dev-secret-2026-change-me", // use a strong secret in production
+    secret: process.env.SESSION_SECRET || "starfish-dev-secret-2026-change-me",
     name: 'sid', // session cookie name
     resave: false,
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        secure: 'auto',  // auto: true if req comes over HTTPS
+        secure: isSecure,
         maxAge: 3600000 * 24,
         sameSite: 'lax',
         path: '/',
     },
-    // add a simple callback for debugging session creation
     store: undefined // default memory store for development
 });
 
@@ -23,7 +24,6 @@ export const sessionMiddleware = session({
  * use a same-origin proxy (e.g. Vite proxy) instead.
  */
 export function adaptSessionCookie(req: any, _res: any, next: any) {
-    const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     const origin = req.headers.origin || '';
     const host = req.headers.host || '';
     const isCrossOrigin = !!origin && !origin.includes(host);
