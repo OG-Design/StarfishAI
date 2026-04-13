@@ -35,14 +35,18 @@ export class AiService {
 
     constructor(private readonly config: ConfigService) {
         this.ollamaClient = new Ollama({
-            host: this.getOllamaEndpoint() ?? 'http://127.0.0.1:11434'
+            host: this.getOllamaEndpoint()
         })
     };
 
     private readonly ollamaClient: Ollama;
 
     getOllamaEndpoint() {
-        return this.config.get<string>('OLLAMA_URL');
+        // In Electron mode Ollama runs on the host, not inside Docker
+        if (process.env.ELECTRON_MODE === 'true') {
+            return `http://127.0.0.1:${this.config.get<string>('OLLAMA_PORT') || '11434'}`;
+        }
+        return this.config.get<string>('OLLAMA_URL') ?? 'http://127.0.0.1:11434';
     }
 
     // make threads
@@ -498,4 +502,7 @@ AND idUserGroup = ?
 
     }
 
+    async generateThreadTitle(session: any, thread: number) {
+
+    }
 }

@@ -164,11 +164,11 @@ async function addModelToGroup() {
     responseAddModel.value="Loading...";
 
     const params = new URLSearchParams({
-            modelName: addName.value,
-            modelFullName: addFullName.value,
-            modelThinkingLevel: addThinking.value.value,
-            groupName: selectedGroup.value.name,
-            groupId: selectedGroup.value.userGroup_idUserGroup
+        modelName: addName.value,
+        modelFullName: addFullName.value,
+        modelThinkingLevel: addThinking.value.value,
+        groupName: selectedGroup.value.name,
+        groupId: selectedGroup.value.userGroup_idUserGroup
     });
 
     console.log("addModelToGroup, Body: \n", params);
@@ -189,12 +189,19 @@ async function addModelToGroup() {
         const lines = newData.split('\n');
         for (const line of lines) {
             if (line.startsWith("data: ")) {
+                const raw = line.substring(6);
                 try {
-                    const data = JSON.parse(line.substring(6));
+                    const data = JSON.parse(raw);
+                    if (data.error) {
+                        console.error("Pull error:", data.error);
+                        responseAddModel.value = data.error;
+                        isLoading.value = false;
+                        return;
+                    }
                     console.log(data.status, data.progress + '%')
                     downloadPercentage.value=data.progress;
                 } catch (err) {
-                    console.error("Parse error:", err);
+                    console.warn("SSE non-JSON data:", raw);
                 }
             }
         }

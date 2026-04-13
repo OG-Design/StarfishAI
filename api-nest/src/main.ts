@@ -24,6 +24,11 @@ async function bootstrap() {
   console.log("SECURE", configService.get('SECURE'));
   console.log("HOST", configService.get('HOST'));
 
+  // Trust the first proxy (nginx) so Express honours X-Forwarded-Proto
+  // and sets secure cookies correctly behind the reverse proxy.
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', 1);
+
   const allowedOrigins = (configService.get<string>('ALLOWED_ORIGINS') ?? '').split(',').map(s => s.trim()).filter(Boolean);
   const allowAll = allowedOrigins.includes('*');
 

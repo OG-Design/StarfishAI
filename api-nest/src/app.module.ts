@@ -19,6 +19,7 @@ import { FilestorageService } from './filestorage/filestorage.service';
 import { FilestorageModule } from './filestorage/filestorage.module';
 import { FilestorageController } from './filestorage/filestorage.controller';
 import { SystemModule } from './system/system.module';
+import { SitesettingsModule } from './sitesettings/sitesettings.module';
 
 
 @Module({
@@ -45,6 +46,7 @@ import { SystemModule } from './system/system.module';
     }),
     FilestorageModule,
     SystemModule.register(),
+    SitesettingsModule,
   ],
   controllers: [AppController, UserController, AuthController, AiController],
   providers: [AppService, UserService, AuthService, AiService, ChateventGateway, FilestorageService],

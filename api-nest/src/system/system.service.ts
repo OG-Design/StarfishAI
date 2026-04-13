@@ -2,8 +2,6 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 
 import { type OllamaComposeConfig } from 'src/types/OllamaComposeBase';
 
-import settings from "../settings.json";
-
 import * as yaml from 'js-yaml';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -15,6 +13,8 @@ import { stderr, stdout } from 'process';
 @Injectable()
 export class SystemService {
 
+    private readonly settingsPath = path.join(process.cwd(), 'settings-data', 'settings.json');
+
     constructor() {
         this.ollamaPath=path.join(process.cwd(), '../', 'ollama', 'docker-compose.yml');
         if (fs.existsSync(this.ollamaPath)) {
@@ -23,6 +23,7 @@ export class SystemService {
             console.warn(`Ollama compose file not found at ${this.ollamaPath}, skipping config load.`);
             this.ollamaConfig = null;
         }
+        const settings = JSON.parse(fs.readFileSync(this.settingsPath, 'utf8'));
         this.presets = settings.api.systemSettings['compose-ollama'].presets;
     }
     private readonly ollamaPath: string;

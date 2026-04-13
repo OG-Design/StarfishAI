@@ -5,8 +5,8 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig(({mode})=>{
   const env = loadEnv(mode, process.cwd()+"../");
   const API_URL = env.VITE_API_URL || "http://localhost:3000" ; // Double check
-  const wsProtocol = env.VITE_SECURE === 'true' ? 'wss' : 'ws';
-  const httpProtocol = env.VITE_SECURE === 'true' ? 'https' : 'http';
+  // const wsProtocol = env.VITE_SECURE === 'true' ? 'wss' : 'ws';
+  // const httpProtocol = env.VITE_SECURE === 'true' ? 'https' : 'http';
   return {
     plugins: [vue()],
     base:"./",
