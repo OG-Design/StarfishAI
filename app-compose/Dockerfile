@@ -15,7 +15,6 @@ COPY api-nest/. ./
 
 COPY webapp /StarfishAI/webapp
 
-
 RUN node -v
 
 RUN ls; ls /StarfishAI

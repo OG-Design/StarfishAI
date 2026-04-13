@@ -46,6 +46,7 @@ services:
     volumes:
       - starfishai-db-data:/StarfishAI/db:rw # using sqlite
       - starfishai-static-data:/StarfishAI/static:rw
+      - ../api-nest/settings-data:/StarfishAI/api-nest/settings-data:rw
     ports:
       - "${API_PORT}:${API_PORT}"
     networks:

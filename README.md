@@ -12,21 +12,20 @@ Starfish is an AI app that allows multiple users to use AI locally. You can chat
 - Model downloader.
 - Profile menu.
 - A local and remote mode.
+- Redis integration for JWT authentication.
+- AI Vision and file sharing.
+- Basic TTS.
 
 # W.I.P
 
-- System section inside settings.
 - Mobile UI optimisation.
-- Auto update model selector with new models.
-- Make model selector completely viewable on every system.
+- Expanded TTS (tts options)
 
 # Backlog
 
-- Complete redis integration.
-- Add vision.
-- Add TTS.
 - Integrate other AI technology into the project.
-
+- Change user's password, verify emails.
+- Administrator interface.
 
 # **Getting started**
 

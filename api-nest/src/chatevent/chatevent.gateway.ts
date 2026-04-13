@@ -29,7 +29,12 @@ import { Ollama } from 'ollama';
 export class ChateventGateway {
   private readonly ollamaURL:string;
   constructor(private readonly config: ConfigService, private readonly authService: AuthService, private readonly fileStorageService: FilestorageService) {
-    this.ollamaURL = this.config.get<string>('OLLAMA_URL') ?? "";
+    // In Electron mode Ollama runs on the host, not inside Docker
+    if (process.env.ELECTRON_MODE === 'true') {
+      this.ollamaURL = `http://127.0.0.1:${this.config.get<string>('OLLAMA_PORT') || '11434'}`;
+    } else {
+      this.ollamaURL = this.config.get<string>('OLLAMA_URL') ?? 'http://127.0.0.1:11434';
+    }
   }
 
 

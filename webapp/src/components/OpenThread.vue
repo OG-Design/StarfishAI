@@ -307,7 +307,7 @@ async function handleThreadChange() {
 }
 
 const refFiles = ref<File[]>([]);
-const APIFilePaths = ref<string[]>();
+// const APIFilePaths = ref<string[]>();
 
 function onFileChange(event: Event) {
   const target = event?.target as HTMLInputElement;
@@ -358,28 +358,28 @@ async function handleFileUpload() {
   return data.filesIndex;
 }
 
-const images = ref();
-async function fetchMessageImages() {
-  
-  const body = {
-    filePaths: APIFilePaths.value
-  };
+// const images = ref();
+// async function fetchMessageImages() {
 
-  const res = await apiFetch('/api/filestorage/files', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/octet-stream'
-    }, 
-    body: JSON.stringify(body)
-  });  
+//   const body = {
+//     filePaths: APIFilePaths.value
+//   };
 
-  const data = await res.json();
+//   const res = await apiFetch('/api/filestorage/files', {
+//     method: 'POST',
+//     headers: {
+//       'Content-Type': 'application/octet-stream'
+//     },
+//     body: JSON.stringify(body)
+//   });  
 
-  console.log('res from fetchMessageImages:', data)
-  
-  return data;
+//   const data = await res.json();
 
-}
+//   console.log('res from fetchMessageImages:', data)
+
+//   return data;
+
+// }
 
 // sends the personality e.g the system prompt to the API
 async function handlePersonalityChange() {

@@ -7,21 +7,23 @@ import db from '../db';
 
 const saltRounds: number = 10;
 
-import settings from 'src/settings.json';
-
-const isRegisterable = settings.user.register.isRegisterable;
+import { SitesettingsService } from '../sitesettings/sitesettings.service';
 
 @Injectable()
 export class UserService {
 
+    constructor(private readonly sitesettingsService: SitesettingsService) {}
+
     // checks setting isRegisterable: enables registration if true, blocks if false
     isRegisterable(): object {
+        const settings = this.sitesettingsService.checkSiteSettings();
         return { isRegisterable: settings.user.register.isRegisterable };
     }
 
     async register(username: string, password: string, password_confirm: string): Promise<string> {
 
         // check registration ability throw 404 if is not registerable
+        const isRegisterable = this.sitesettingsService.checkSiteSettings().user.register.isRegisterable;
         if (!isRegisterable) {
             throw new NotFoundException;
         }

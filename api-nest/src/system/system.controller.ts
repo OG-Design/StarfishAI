@@ -25,4 +25,5 @@ export class SystemController {
     restartOllama() {
         return this.systemService.restartOllama();
     }
+
 }
