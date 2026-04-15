@@ -42,7 +42,7 @@ services:
       - HOST
       - JWT_SECRET
       - SESSION_SECRET
-      - DB_PATH
+      - DB_PATH=/StarfishAI/db/starfish.db
     volumes:
       - starfishai-db-data:/StarfishAI/db:rw # using sqlite
       - starfishai-static-data:/StarfishAI/static:rw

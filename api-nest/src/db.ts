@@ -12,8 +12,12 @@ config({ path: join(process.cwd(), "../", ".env.secret")});
 // get path from env
 export const dbPath=process.env.DB_PATH??"./starfish.db";
 
-// create the db
-const db: DatabaseType = new Database(join(process.cwd(), dbPath));
+console.log(dbPath);
+
+// create the db — use path as-is if absolute, otherwise resolve relative to cwd
+import { isAbsolute } from "path";
+const resolvedDbPath = isAbsolute(dbPath) ? dbPath : join(process.cwd(), dbPath);
+const db: DatabaseType = new Database(resolvedDbPath);
 
 // enable foreign key enforcement (SQLite defaults to OFF)
 db.pragma('foreign_keys = ON');

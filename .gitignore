@@ -31,5 +31,8 @@ dist-ssr
 
 *.db
 
+# SSL certificates
+*.pem
+
 # Ignore release folder
 release/

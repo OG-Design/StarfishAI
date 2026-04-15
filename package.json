@@ -1,9 +1,10 @@
 {
     "scripts": {
+        "gen:env:win":"generateENV-windows.bat",
         "sync:env": "sync.env.bat",
-        "docker:build:appimage":"docker image build --no-cache -f ./app-compose/Dockerfile -t starfishai-appimage .",
-        "docker:run:appimage":"docker run --rm -it starfishai-appimage sh",
-        "docker:run:app-compose":"npm run sync:env && docker-compose -f ./app-compose/docker-compose.yml up --build",
+        "docker:build:appimage": "docker image build --no-cache -f ./app-compose/Dockerfile -t starfishai-appimage .",
+        "docker:run:appimage": "docker run --rm -it starfishai-appimage sh",
+        "docker:run:app-compose": "npm run sync:env && docker-compose -f ./app-compose/docker-compose.yml up --build",
         "docker:run:all": "npm run docker:build:appimage && docker-compose up -d",
         "docker:stop": "docker-compose down",
         "docker:restart": "docker-compose down && docker-compose up -d --build",
@@ -23,8 +24,12 @@
         "api-nest:build": "cd api-nest && npm run build",
         "webapp:build": "cd webapp && npm run build",
         "electron:build": "cd electron && npm run build",
-        "electron:rebuild":"cd electron && npm run electron-rebuild",
-        "build": "npm run api-nest:build && npm run webapp:build && npm run electron:build && npm run electron:rebuild"
+        "electron:rebuild": "cd electron && npm run electron-rebuild",
+        "build": "npm run api-nest:build && npm run webapp:build && npm run electron:build && npm run electron:rebuild",
+        "install:all": "npm run gen:env:win && npm run sync:env && npm install && npm run install:webapp && npm run api-nest:build && npm run webapp:build && npm run install:api-nest && npm run install:electron",
+        "install:webapp": "cd webapp && npm install",
+        "install:api-nest": "cd api-nest && npm install",
+        "install:electron": "cd electron && npm install"
     },
     "devDependencies": {
         "@electron/rebuild": "^3.2.9",
