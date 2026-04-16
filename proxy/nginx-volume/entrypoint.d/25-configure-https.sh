@@ -50,7 +50,7 @@ server {
     }
 }
 EOF
-    echo "25-generate-ssl.sh: SSL configuration generated (ports 443, 444)"
+    echo "25-configure-https.sh: SSL configuration generated (ports 443, 444)"
 else
-    echo "25-generate-ssl.sh: SSL not enabled (SECURE=${SECURE:-unset}) or certs not found, skipping"
+    echo "25-configure-https.sh: SSL not enabled (SECURE=${SECURE:-unset}) or certs not found, skipping"
 fi

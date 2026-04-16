@@ -133,6 +133,8 @@ export interface PromptHandlers {
     onThinkingComplete: () => void;
     onComplete: () => void;
     onError: (err: any) => void;
+    onFileProgress?: (progress: { current: number; total: number; fileName: string }) => void;
+    onFileProgressComplete?: (info: { total: number }) => void;
 }
 
 // Connects, registers all event listeners, emits the prompt, and returns a cleanup function.
@@ -156,6 +158,8 @@ export async function sendPromptWithHandlers(
         socket?.off('ai_complete', handlers.onComplete);
         socket?.off('error', handlers.onError);
         socket?.off('connect_error', handlers.onError);
+        if (handlers.onFileProgress) socket?.off('file_progress', handlers.onFileProgress);
+        if (handlers.onFileProgressComplete) socket?.off('file_progress_complete', handlers.onFileProgressComplete);
     };
 
     socket.on('ai_chunk', handlers.onChunk);
@@ -164,6 +168,8 @@ export async function sendPromptWithHandlers(
     socket.once('ai_complete', handlers.onComplete);
     socket.once('error', handlers.onError);
     socket.once('connect_error', handlers.onError);
+    if (handlers.onFileProgress) socket.on('file_progress', handlers.onFileProgress);
+    if (handlers.onFileProgressComplete) socket.once('file_progress_complete', handlers.onFileProgressComplete);
 
     aiChunks.value = [];
     console.log("Sending prompt:", { thread, message, model });

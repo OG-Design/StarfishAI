@@ -7,7 +7,7 @@ services:
       - "444:444"
     volumes:
       - ./nginx-volume/templates:/etc/nginx/templates:ro
-      - ./nginx-volume/entrypoint.d/25-generate-ssl.sh:/docker-entrypoint.d/25-generate-ssl.sh:ro
+      - ./nginx-volume/entrypoint.d/25-configure-https.sh:/docker-entrypoint.d/25-configure-https.sh:ro
       - ./nginx-volume/ssl:/etc/nginx/ssl:ro
     environment:
       - API_PORT=${API_PORT}
