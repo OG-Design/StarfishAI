@@ -33,13 +33,23 @@ function parseJsonFromString(str: string): any | null {
 @Injectable()
 export class AiService {
 
+    private readonly ollamaClient: Ollama;
+    private readonly ollamaURL:string;
+
     constructor(private readonly config: ConfigService) {
+
+        if (process.env.ELECTRON_MODE === 'true') {
+          this.ollamaURL = `http://127.0.0.1:${this.config.get<string>('OLLAMA_PORT') || '11434'}`;
+        } else {
+          this.ollamaURL = this.config.get<string>('OLLAMA_URL') ?? 'http://127.0.0.1:11434';
+        }
+
         this.ollamaClient = new Ollama({
             host: this.getOllamaEndpoint()
         })
     };
 
-    private readonly ollamaClient: Ollama;
+
 
     getOllamaEndpoint() {
         // In Electron mode Ollama runs on the host, not inside Docker
@@ -504,5 +514,26 @@ AND idUserGroup = ?
 
     async generateThreadTitle(session: any, thread: number) {
 
+        const messagesRaw = this.getMessages(session, thread);
+        const messages: any[] = [{role: "system", content:"Summarize the following context into a single title of a few words"}];
+        messages.push(...messagesRaw.filter((m: any) => m && m.role && m.content).map((m: any) => ({
+            role: m.role,
+            content: m.content
+        })));
+
+        try {
+            const response = await this.ollamaClient.chat({
+                model: "llama3.2",
+                messages,
+                stream: false,
+            });
+
+            const title = response.message.content.trim();
+            this.alterThread(session, thread, title);
+            return { title };
+        } catch (err) {
+            console.error("Generate thread title failed:", err);
+            throw new InternalServerErrorException("Internal server error");
+        }
     }
 }
