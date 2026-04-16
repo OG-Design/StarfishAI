@@ -1,6 +1,7 @@
 {
     "scripts": {
         "gen:env:win":"generateENV-windows.bat",
+        "gen:ssl:bash":"cd proxy/nginx-volume/ssl && 25-generate-ssl.sh",
         "sync:env": "sync.env.bat",
         "docker:build:appimage": "docker image build --no-cache -f ./app-compose/Dockerfile -t starfishai-appimage .",
         "docker:run:appimage": "docker run --rm -it starfishai-appimage sh",
