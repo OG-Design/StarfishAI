@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS user (
 CREATE TABLE IF NOT EXISTS thread (
   idThread INTEGER NOT NULL PRIMARY KEY,
   title TEXT NOT NULL,
+  aiGeneratedTitle INTEGER NOT NULL DEFAULT 0,
+  titleLastMessageCount INTEGER NOT NULL DEFAULT 0,
   author_idUser INTEGER NOT NULL,
   FOREIGN KEY (author_idUser) REFERENCES user(idUser)
 );
