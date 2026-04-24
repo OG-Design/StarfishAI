@@ -1,6 +1,6 @@
 {
   "name": "electron",
-  "version": "0.0.2-alpha",
+  "version": "0.0.3-alpha",
   "description": "Starfish AI Desktop Application",
   "main": "dist/main.js",
   "scripts": {

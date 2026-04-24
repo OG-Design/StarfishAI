@@ -22,6 +22,46 @@ export interface FileProcessingProgress {
  * Extract files from a zip buffer in memory.
  * Returns an array of extracted file entries.
  */
+// Directories to skip entirely when extracting zips
+const IGNORED_DIRS = [
+  'node_modules', '.git', '.svn', '.hg', '.DS_Store',
+  '__pycache__', '.venv', 'venv', 'env',
+  '.tox', '.mypy_cache', '.pytest_cache',
+  'vendor', 'bower_components',
+  '.gradle', '.idea', '.vscode',
+  'dist', 'build', 'out', 'target',
+  '.next', '.nuxt', '.cache',
+  'Pods', '.dart_tool', '.pub-cache',
+];
+
+// Dotfiles to keep (config files that matter)
+const KEEP_DOTFILES = new Set([
+  '.gitignore', '.dockerignore', '.npmignore',
+  '.eslintrc', '.eslintrc.json', '.eslintrc.js', '.eslintrc.cjs',
+  '.prettierrc', '.prettierrc.json', '.prettierignore',
+  '.editorconfig', '.env', '.env.example', '.env.local',
+  '.babelrc', '.browserslistrc', '.nvmrc', '.node-version',
+  '.tsconfig.json', '.stylelintrc',
+]);
+
+function shouldSkipEntry(entryName: string): boolean {
+  const parts = entryName.split('/');
+
+  for (const part of parts) {
+    // Skip entries inside ignored directories
+    if (IGNORED_DIRS.includes(part)) return true;
+
+    // Skip hidden directories (starting with .) unless they are the file itself (last segment)
+    if (part.startsWith('.') && part !== parts[parts.length - 1]) return true;
+  }
+
+  // For the file itself (last segment), skip hidden files unless they're in the keep list
+  const fileName = parts[parts.length - 1];
+  if (fileName.startsWith('.') && !KEEP_DOTFILES.has(fileName)) return true;
+
+  return false;
+}
+
 export function extractZipEntries(buffer: Buffer): ExtractedFile[] {
   const zip = new AdmZip(buffer);
   const entries = zip.getEntries();
@@ -31,6 +71,12 @@ export function extractZipEntries(buffer: Buffer): ExtractedFile[] {
     if (entry.isDirectory) continue;
 
     const name = entry.entryName;
+
+    if (shouldSkipEntry(name)) {
+      console.log(`[ZipExtract] Skipping: "${name}"`);
+      continue;
+    }
+
     console.log(`[ZipExtract] Found entry: "${name}"`);
     const data = entry.getData();
 
@@ -117,6 +163,7 @@ export function buildFolderMap(files: ExtractedFile[]): string {
  * Process extracted files: if a text file exceeds MAX_LINES, summarize it via Ollama.
  * Emits progress events via the provided callback.
  * Images are passed through as-is (no summarization).
+ * onSummaryChunk is called with each streaming chunk during summarization.
  */
 export async function processExtractedFiles(
   files: ExtractedFile[],
@@ -124,6 +171,9 @@ export async function processExtractedFiles(
   model: string,
   onProgress: (progress: FileProcessingProgress) => void,
   abortSignal?: AbortSignal,
+  onSummaryChunk?: (chunk: string) => void,
+  onSummaryStart?: (fileName: string) => void,
+  onSummaryComplete?: (fileName: string, summary: string) => void,
 ): Promise<string[]> {
   const contextParts: string[] = [];
   const total = files.length;
@@ -131,6 +181,9 @@ export async function processExtractedFiles(
   // Prepend a folder map so the AI can see the full project structure
   const folderMap = buildFolderMap(files);
   contextParts.push(`--- Zip File Structure ---\n${folderMap}\n--- End of structure ---`);
+
+  // Stream the folder structure to the client
+  onSummaryChunk?.(`**📁 Folder Structure**\n\n\`\`\`\n${folderMap}\n\`\`\`\n`);
 
   for (let i = 0; i < files.length; i++) {
     if (abortSignal?.aborted) break;
@@ -146,14 +199,20 @@ export async function processExtractedFiles(
     const lines = file.content.split('\n');
 
     if (lines.length <= MAX_LINES) {
-      // Small file: include as-is
+      // Small file: include as-is (no summary saved)
+      onSummaryStart?.(file.name);
+      onSummaryChunk?.(`\n\n**📄 ${file.name}** (${lines.length} lines — included in full)\n\n`);
       contextParts.push(
         `--- File: ${file.name} (${lines.length} lines) ---\n${file.content}\n--- End of file ---`
       );
     } else {
-      // Large file: summarize via Ollama
+      // Large file: summarize via Ollama with streaming
       try {
-        const summary = await summarizeFile(ollamaClient, model, file.name, file.content, abortSignal);
+        onSummaryStart?.(file.name);
+        onSummaryChunk?.(`\n\n**📄 ${file.name}** (${lines.length} lines — summarized)\n\n`);
+        const summary = await summarizeFileStreaming(ollamaClient, model, file.name, file.content, abortSignal, onSummaryChunk);
+        console.log(`[ZipSummary] "${file.name}" (${lines.length} lines) summary:\n${summary}`);
+        onSummaryComplete?.(file.name, summary);
         contextParts.push(
           `--- File: ${file.name} (summarized from ${lines.length} lines) ---\n${summary}\n--- End of file ---`
         );
@@ -168,6 +227,15 @@ export async function processExtractedFiles(
   return contextParts;
 }
 
+const SUMMARY_SYSTEM_PROMPT = `You are a detailed file summarizer. Analyze the file content thoroughly and provide:
+1. **Purpose**: What this file does and its role in the project.
+2. **Key structures**: Classes, interfaces, types, and their relationships.
+3. **Important functions/methods**: Name, parameters, return type, and what they do.
+4. **Code snippets**: Include important code snippets (function signatures, key logic, configurations) wrapped in fenced code blocks with the appropriate language.
+5. **Dependencies**: Notable imports, external libraries, or modules used.
+6. **Configuration & constants**: Any important config values, environment variables, or constants.
+Be thorough but organized. Preserve code snippets that are essential to understanding the file.`;
+
 async function summarizeFile(
   ollamaClient: Ollama,
   model: string,
@@ -180,7 +248,7 @@ async function summarizeFile(
     messages: [
       {
         role: 'system',
-        content: 'You are a file summarizer. Summarize the following file content concisely, keeping all important information such as key functions, classes, configurations, logic, and structure. Be thorough but concise.'
+        content: SUMMARY_SYSTEM_PROMPT
       },
       {
         role: 'user',
@@ -191,4 +259,40 @@ async function summarizeFile(
   });
 
   return response.message.content;
+}
+
+async function summarizeFileStreaming(
+  ollamaClient: Ollama,
+  model: string,
+  fileName: string,
+  content: string,
+  abortSignal?: AbortSignal,
+  onChunk?: (chunk: string) => void,
+): Promise<string> {
+  const stream = await ollamaClient.chat({
+    model,
+    messages: [
+      {
+        role: 'system',
+        content: SUMMARY_SYSTEM_PROMPT
+      },
+      {
+        role: 'user',
+        content: `Summarize this file "${fileName}":\n\n${content}`
+      }
+    ],
+    stream: true,
+  });
+
+  const chunks: string[] = [];
+  for await (const chunk of stream) {
+    if (abortSignal?.aborted) break;
+    const text = chunk.message.content;
+    if (text) {
+      chunks.push(text);
+      onChunk?.(text);
+    }
+  }
+
+  return chunks.join('');
 }

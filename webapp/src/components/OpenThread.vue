@@ -142,9 +142,11 @@ async function getAllMessages() {
   for (let i = data.length - 1; i >= 0; i--) {
     if (data[i].role === 'thinking') { lastThinkingIdx = i; break; }
   }
-  messages.value = data.map((m: any, i: number) =>
-    m.role === 'thinking' ? { ...m, _open: i === lastThinkingIdx } : m
-  );
+  messages.value = data.map((m: any, i: number) => {
+    if (m.role === 'thinking') return { ...m, _open: i === lastThinkingIdx };
+    if (m.role === 'file-summary') return { ...m, _open: false, complete: true };
+    return m;
+  });
 
   const systemMessage = data.find((msg: any) => {
     return msg.role==='system'
@@ -206,6 +208,9 @@ async function handlePrompt() {
 
   // Create a placeholder for the thinking content (inserted into the list only when the first chunk arrives)
   let thinkingMessage: any = null;
+
+  // Create a placeholder for file summary (inserted when first chunk arrives)
+  let fileSummaryMessage: any = null;
 
   // Create a placeholder for the assistant's message
   let assistantMessage = { role: 'assistant', content: '', complete: false };
@@ -282,6 +287,27 @@ async function handlePrompt() {
           console.log('[FileProgress] Complete');
           isProcessingFiles.value = false;
           fileProgress.value = null;
+        },
+        onFileSummaryStart(info: { fileName: string }) {
+          console.log('[FileSummary] Start:', info.fileName);
+          fileSummaryMessage = { role: 'file-summary', content: '', complete: false, _open: true, fileName: info.fileName };
+          const assistantIdx = messages.value.indexOf(assistantMessage);
+          messages.value.splice(assistantIdx, 0, fileSummaryMessage);
+        },
+        onFileSummaryChunk(chunk: string) {
+          if (fileSummaryMessage) {
+            fileSummaryMessage.content += chunk;
+            messages.value = [...messages.value];
+            scrollToBottom();
+          }
+        },
+        onFileSummaryComplete() {
+          console.log('[FileSummary] Complete');
+          if (fileSummaryMessage) {
+            fileSummaryMessage.complete = true;
+            fileSummaryMessage._open = false;
+            messages.value = [...messages.value];
+          }
         },
       }
     );
@@ -535,6 +561,19 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
           <div class="thinking-details" :class="{ open: message._open }">
             <div class="thinking-summary" role="button" @click="toggleThinking(message)">
               <span>Thinking</span>
+              <span v-if="message.complete === false" class="thinking-indicator">...</span>
+            </div>
+            <div class="thinking-content-wrapper">
+              <div class="thinking-content markdown-content" v-html="md.render(message.content ?? '')"></div>
+            </div>
+          </div>
+        </li>
+
+        <!-- File summary block: collapsible, similar to thinking -->
+        <li v-else-if="message.role === 'file-summary'" class="thinking-block file-summary-block">
+          <div class="thinking-details" :class="{ open: message._open }">
+            <div class="thinking-summary file-summary-header" role="button" @click="toggleThinking(message)">
+              <span>File Summary{{ message.fileName ? ': ' + message.fileName : '' }}</span>
               <span v-if="message.complete === false" class="thinking-indicator">...</span>
             </div>
             <div class="thinking-content-wrapper">
@@ -1076,6 +1115,12 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
     font-size: 0.88em;
     opacity: 0.75;
     border-top: 1px solid var(--thinking-divider);
+  }
+}
+
+.file-summary-block {
+  .file-summary-header {
+    color: var(--key-1, #4078f2);
   }
 }
 

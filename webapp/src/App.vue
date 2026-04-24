@@ -251,7 +251,10 @@ function handleLogout() {
 let devMode = false;
 let alphaMode = false;
 
-const version = ref(pkg.build.productName+" "+pkg.version);
+
+const location: any = import.meta.env.VITE_USED_AS_REMOTE ? "Remote" : "Local";
+
+const version = ref(pkg.build.productName + " " + pkg.version+" - " + location);
 
 </script>
 
