@@ -7,6 +7,7 @@ import { secretJWT } from "src/secretJWT";
 
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from 'src/auth/auth.service';
+import { AiService } from 'src/ai/ai.service';
 
 import db from '../db';
 
@@ -29,7 +30,7 @@ import { Ollama } from 'ollama';
 })
 export class ChateventGateway {
   private readonly ollamaURL:string;
-  constructor(private readonly config: ConfigService, private readonly authService: AuthService, private readonly fileStorageService: FilestorageService) {
+  constructor(private readonly config: ConfigService, private readonly authService: AuthService, private readonly fileStorageService: FilestorageService, private readonly aiService: AiService) {
     // In Electron mode Ollama runs on the host, not inside Docker
     if (process.env.ELECTRON_MODE === 'true') {
       this.ollamaURL = `http://127.0.0.1:${this.config.get<string>('OLLAMA_PORT') || '11434'}`;
@@ -436,6 +437,12 @@ export class ChateventGateway {
       if (fullContent) {
         const messageResponse = { role: "assistant", content: fullContent };
         db.prepare("INSERT INTO message (data, idThread) VALUES (?, ?)").run(JSON.stringify(messageResponse), data.thread);
+      }
+
+      try {
+        await this.aiService.maybeRegenerateTitleOnContextChange(data.thread, idUser);
+      } catch (titleErr) {
+        console.error('Title regeneration check failed:', titleErr);
       }
 
       client.emit('ai_thinking_complete');

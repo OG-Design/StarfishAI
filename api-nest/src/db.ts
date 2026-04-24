@@ -48,4 +48,16 @@ if (messageFk && messageFk.on_delete !== 'CASCADE') {
   `);
 }
 
+// migrate thread table to include aiGeneratedTitle flag
+const threadColumns = db.pragma('table_info(thread)') as any[];
+const hasAiGeneratedTitle = threadColumns.some((col: any) => col.name === 'aiGeneratedTitle');
+if (!hasAiGeneratedTitle) {
+  db.exec('ALTER TABLE thread ADD COLUMN aiGeneratedTitle INTEGER NOT NULL DEFAULT 0');
+}
+
+const hasTitleLastMessageCount = threadColumns.some((col: any) => col.name === 'titleLastMessageCount');
+if (!hasTitleLastMessageCount) {
+  db.exec('ALTER TABLE thread ADD COLUMN titleLastMessageCount INTEGER NOT NULL DEFAULT 0');
+}
+
 export default db;

@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, OnModuleDestroy, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 
 import thread from '../types/thread';
 
@@ -15,6 +15,7 @@ import { Observable } from 'rxjs';
 import { getUserGroupPermissions } from 'src/composables/getUserModelPermissions';
 import { checkModelExistsOnGroup, checkModelExistsOnAll } from 'src/composables/checkModelExists';
 import { Session } from 'inspector';
+import { SitesettingsService } from 'src/sitesettings/sitesettings.service';
 
 function parseJsonFromString(str: string): any | null {
     const match = str.match(/{[\s\S]*}/);
@@ -35,8 +36,10 @@ export class AiService {
 
     private readonly ollamaClient: Ollama;
     private readonly ollamaURL:string;
+    private titleGenerationInterval?: NodeJS.Timeout;
+    private titleGenerationRunning = false;
 
-    constructor(private readonly config: ConfigService) {
+    constructor(private readonly config: ConfigService, private readonly sitesettingsService: SitesettingsService) {
 
         if (process.env.ELECTRON_MODE === 'true') {
           this.ollamaURL = `http://127.0.0.1:${this.config.get<string>('OLLAMA_PORT') || '11434'}`;
@@ -49,6 +52,20 @@ export class AiService {
         })
     };
 
+    onModuleInit() {
+        // Run once on startup and then every 60 minutes.
+        void this.generateTitles();
+        this.titleGenerationInterval = setInterval(() => {
+            void this.generateTitles();
+        }, 60 * 60 * 1000);
+    }
+
+    onModuleDestroy() {
+        if (this.titleGenerationInterval) {
+            clearInterval(this.titleGenerationInterval);
+        }
+    }
+
 
 
     getOllamaEndpoint() {
@@ -59,13 +76,49 @@ export class AiService {
         return this.config.get<string>('OLLAMA_URL') ?? 'http://127.0.0.1:11434';
     }
 
+    private getTitleGenerationModel(): string {
+        try {
+            const settings: any = this.sitesettingsService.checkSiteSettings();
+            const model = settings?.api?.systemSettings?.titleGeneration?.defaultModel;
+            if (typeof model === 'string' && model.trim().length > 0) {
+                return model.trim();
+            }
+        } catch (err) {
+            console.error('Failed to read title-generation model from settings, using fallback:', err);
+        }
+        return 'llama3.2';
+    }
+
+    private async ensureModelExists(modelName: string): Promise<void> {
+        const model = modelName.trim();
+        if (!model) return;
+
+        const list = await this.ollamaClient.list();
+        const models = (list as any)?.models ?? [];
+        const exists = models.some((m: any) => {
+            const name = String(m?.name ?? '').toLowerCase();
+            const modelField = String(m?.model ?? '').toLowerCase();
+            const target = model.toLowerCase();
+            return name === target || modelField === target || name.startsWith(`${target}:`) || modelField.startsWith(`${target}:`);
+        });
+
+        if (exists) return;
+
+        console.log(`Title model "${model}" not found locally, pulling from Ollama...`);
+        const pullStream = await this.ollamaClient.pull({ model, stream: true });
+        for await (const _event of pullStream as AsyncIterable<any>) {
+            // exhaust stream until pull completes
+        }
+        console.log(`Title model "${model}" pulled successfully.`);
+    }
+
     // make threads
     createThread(session: any) {
         const idUser = session.user.idUser;
 
         console.log("User", session.user.username, "is creating a new thread");
 
-        const threads = db.prepare("INSERT INTO thread (title, author_idUser) VALUES ('Untitled', ?)").run(idUser);
+        const threads = db.prepare("INSERT INTO thread (title, aiGeneratedTitle, titleLastMessageCount, author_idUser) VALUES ('Untitled', 0, 0, ?)").run(idUser);
 
         const systemPrompt = {
             role: "system",
@@ -89,12 +142,17 @@ export class AiService {
     }
 
     // alters the title of a thread
-    alterThread(session: any, thread: number, title: string) {
+    alterThread(session: any, thread: number, title: string, aiGeneratedTitle: number = 0) {
         const idUser = session.user.idUser;
 
         console.log("User", session.user.username, "is altering a thread with id", thread);
 
-        const alterThread = db.prepare("UPDATE thread SET title = ? WHERE author_idUser = ? AND idThread = ? ").run(title, idUser, thread);
+        const messageCountRow: any = db.prepare('SELECT COUNT(*) as count FROM message WHERE idThread = ?').get(thread);
+        const messageCount = Number(messageCountRow?.count ?? 0);
+
+        const alterThread = db.prepare(
+            "UPDATE thread SET title = ?, aiGeneratedTitle = ?, titleLastMessageCount = ? WHERE author_idUser = ? AND idThread = ? "
+        ).run(title, aiGeneratedTitle, messageCount, idUser, thread);
 
     }
 
@@ -106,7 +164,7 @@ export class AiService {
         console.log("User", session.user.idUser, "is trying to access thread", thread, "\n Result of isAuthor:", isAuthor);
         
 
-        const structuredContent = {role:"system",content: personality}; 
+        const structuredContent = {role:"system",content: personality};
         db.prepare("UPDATE message SET data = ? WHERE idThread = ? AND isSystem = 1 ").run(JSON.stringify(structuredContent), thread);
     }
 
@@ -268,6 +326,12 @@ export class AiService {
 
 
         db.prepare('INSERT INTO message (idThread, data) VALUES (?, ?)').run(thread, JSON.stringify(res.message));
+
+        try {
+            await this.maybeRegenerateTitleOnContextChange(thread, idUser);
+        } catch (titleErr) {
+            console.error('Title regeneration check failed (fallback path):', titleErr);
+        }
 
         return res;
     }
@@ -514,26 +578,175 @@ AND idUserGroup = ?
 
     async generateThreadTitle(session: any, thread: number) {
 
-        const messagesRaw = this.getMessages(session, thread);
-        const messages: any[] = [{role: "system", content:"Summarize the following context into a single title of a few words"}];
-        messages.push(...messagesRaw.filter((m: any) => m && m.role && m.content).map((m: any) => ({
-            role: m.role,
-            content: m.content
-        })));
+        const messagesRaw: any[] = this.getMessages(session, thread) as any[];
+        const messageCountRow: any = db.prepare('SELECT COUNT(*) as count FROM message WHERE idThread = ?').get(thread);
+        const messageCount = Number(messageCountRow?.count ?? 0);
+
+        const clean = (value: any) => String(value ?? '')
+            .replace(/```[\s\S]*?```/g, ' ')
+            .replace(/--- File:[\s\S]*?--- End of file ---/g, ' ')
+            .replace(/--- Zip File Structure ---[\s\S]*?--- End of structure ---/g, ' ')
+            .replace(/\[[^\]]*file summary[^\]]*\]/gi, ' ')
+            .replace(/\[[^\]]*thinking[^\]]*\]/gi, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        // Only use user/assistant conversation to avoid noisy title context.
+        const snippets = messagesRaw
+            .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && m.content)
+            .map((m: any) => {
+                const base = clean(m.content);
+                const clipped = base.slice(0, 320).trim();
+                return `${m.role.toUpperCase()}: ${clipped}`;
+            })
+            .filter((s: string) => s.length > 8)
+            .slice(-8);
+
+        // Do not generate titles when there is no meaningful user/assistant context.
+        if (snippets.length === 0) {
+            const currentThread: any = db.prepare(`SELECT title FROM thread WHERE idThread = ?`).get(thread);
+            const currentTitle = String(currentThread?.title ?? '').trim();
+            db.prepare('UPDATE thread SET titleLastMessageCount = ? WHERE idThread = ?').run(messageCount, thread);
+            return { title: currentTitle || 'Untitled', updated: false, skipped: true };
+        }
+
+        const model = this.getTitleGenerationModel();
+        await this.ensureModelExists(model);
+
+        const conversationText = snippets.join('\n');
+        const messages: any[] = [
+            {
+                role: 'system',
+                content: 'Generate ONE useful, specific thread title from the conversation. Rules: 3-7 words, plain text only, no quotes, no markdown, no trailing punctuation.'
+            },
+            {
+                role: 'user',
+                content: `Conversation:\n${conversationText || 'No conversation yet'}\n\nReturn only the title.`
+            },
+        ];
 
         try {
             const response = await this.ollamaClient.chat({
-                model: "llama3.2",
+                model,
                 messages,
                 stream: false,
             });
 
-            const title = response.message.content.trim();
-            this.alterThread(session, thread, title);
-            return { title };
+            const rawTitle = String(response?.message?.content ?? '').trim();
+            const cleanedTitle = rawTitle
+                .replace(/^['"`\s]+|['"`\s]+$/g, '')
+                .replace(/^#+\s*/, '')
+                .replace(/\r?\n+/g, ' ')
+                .replace(/[.?!,:;]+$/g, '')
+                .replace(/\s+/g, ' ')
+                .split(' ')
+                .slice(0, 7)
+                .join(' ')
+                .trim();
+
+            const fallback = (() => {
+                const latestUser = [...messagesRaw].reverse().find((m: any) => m?.role === 'user' && m?.content);
+                if (!latestUser) return 'Untitled';
+                const latestUserContent = typeof latestUser?.content === 'string'
+                    ? latestUser.content
+                    : String(latestUser?.content ?? '');
+                const compact = latestUserContent
+                    .replace(/```[\s\S]*?```/g, ' ')
+                    .replace(/--- File:[\s\S]*?--- End of file ---/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .split(' ')
+                    .slice(0, 6)
+                    .join(' ')
+                    .trim();
+                return compact || 'Untitled';
+            })();
+
+            const title = cleanedTitle || fallback;
+
+            const currentThread: any = db.prepare(`SELECT title, aiGeneratedTitle FROM thread WHERE idThread = ?`).get(thread);
+            const currentTitle = String(currentThread?.title ?? '').trim();
+            const isUntitledOrEmpty = currentTitle.length === 0 || currentTitle.toLowerCase() === 'untitled';
+            const isAiGenerated = Number(currentThread?.aiGeneratedTitle ?? 0) === 1;
+            const shouldUpdate = isUntitledOrEmpty || isAiGenerated;
+
+            if (shouldUpdate) {
+                this.alterThread(session, thread, title, 1);
+            }
+
+            // Mark the message-count checkpoint used for title evaluation.
+            db.prepare('UPDATE thread SET titleLastMessageCount = ? WHERE idThread = ?').run(messageCount, thread);
+
+            return { title, updated: shouldUpdate };
         } catch (err) {
             console.error("Generate thread title failed:", err);
             throw new InternalServerErrorException("Internal server error");
+        }
+    }
+
+    async maybeRegenerateTitleOnContextChange(threadId: number, idUser: number) {
+        const threadRow: any = db.prepare('SELECT title, aiGeneratedTitle, titleLastMessageCount, author_idUser FROM thread WHERE idThread = ?').get(threadId);
+        if (!threadRow || Number(threadRow.author_idUser) !== Number(idUser)) return;
+
+        const currentTitle = String(threadRow?.title ?? '').trim();
+        const isUntitledOrEmpty = currentTitle.length === 0 || currentTitle.toLowerCase() === 'untitled';
+        const isAiGenerated = Number(threadRow?.aiGeneratedTitle ?? 0) === 1;
+        if (!isUntitledOrEmpty && !isAiGenerated) return;
+
+        const messageCountRow: any = db.prepare('SELECT COUNT(*) as count FROM message WHERE idThread = ?').get(threadId);
+        const messageCount = Number(messageCountRow?.count ?? 0);
+        const lastCount = Number(threadRow?.titleLastMessageCount ?? 0);
+
+        if (messageCount - lastCount < 5) return;
+
+        const actingSession = { user: { idUser } };
+        await this.generateThreadTitle(actingSession, threadId);
+    }
+
+    async generateTitles() {
+        if (this.titleGenerationRunning) {
+            return;
+        }
+        this.titleGenerationRunning = true;
+
+        console.log("Generating titles for untitled titles ;-)");
+
+        try {
+            const threads: any[] = db.prepare('SELECT * FROM thread').all();
+            const threadCount = threads.length;
+            let processed = 0;
+
+            for (const thread of threads) {
+                processed++;
+                console.log(`Processing ${processed} out of ${threadCount}.`);
+
+                const currentTitle = String(thread?.title ?? '').trim();
+                const isUntitledOrEmpty = currentTitle.length === 0 || currentTitle.toLowerCase() === 'untitled';
+                const isAiGenerated = Number(thread?.aiGeneratedTitle ?? 0) === 1;
+
+                if (!isUntitledOrEmpty && !isAiGenerated) {
+                    continue;
+                }
+
+                // Periodic run: only regenerate when something changed since last check.
+                const messageCountRow: any = db.prepare('SELECT COUNT(*) as count FROM message WHERE idThread = ?').get(thread.idThread);
+                const messageCount = Number(messageCountRow?.count ?? 0);
+                const lastCount = Number(thread?.titleLastMessageCount ?? 0);
+                if (messageCount <= lastCount) {
+                    continue;
+                }
+
+                const actingSession = { user: { idUser: thread.author_idUser } };
+
+                try {
+                    const generatedTitle = await this.generateThreadTitle(actingSession, thread.idThread);
+                    console.log("Title generated:", generatedTitle);
+                } catch (err) {
+                    console.error(`Failed to generate title for thread ${thread.idThread}:`, err);
+                }
+            }
+        } finally {
+            this.titleGenerationRunning = false;
         }
     }
 }
