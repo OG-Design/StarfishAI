@@ -133,6 +133,11 @@ export interface PromptHandlers {
     onThinkingComplete: () => void;
     onComplete: () => void;
     onError: (err: any) => void;
+    onFileProgress?: (progress: { current: number; total: number; fileName: string }) => void;
+    onFileProgressComplete?: (info: { total: number }) => void;
+    onFileSummaryStart?: (info: { fileName: string }) => void;
+    onFileSummaryChunk?: (chunk: string) => void;
+    onFileSummaryComplete?: () => void;
 }
 
 // Connects, registers all event listeners, emits the prompt, and returns a cleanup function.
@@ -156,6 +161,11 @@ export async function sendPromptWithHandlers(
         socket?.off('ai_complete', handlers.onComplete);
         socket?.off('error', handlers.onError);
         socket?.off('connect_error', handlers.onError);
+        if (handlers.onFileProgress) socket?.off('file_progress', handlers.onFileProgress);
+        if (handlers.onFileProgressComplete) socket?.off('file_progress_complete', handlers.onFileProgressComplete);
+        if (handlers.onFileSummaryStart) socket?.off('file_summary_start', handlers.onFileSummaryStart);
+        if (handlers.onFileSummaryChunk) socket?.off('file_summary_chunk', handlers.onFileSummaryChunk);
+        if (handlers.onFileSummaryComplete) socket?.off('file_summary_complete', handlers.onFileSummaryComplete);
     };
 
     socket.on('ai_chunk', handlers.onChunk);
@@ -164,6 +174,11 @@ export async function sendPromptWithHandlers(
     socket.once('ai_complete', handlers.onComplete);
     socket.once('error', handlers.onError);
     socket.once('connect_error', handlers.onError);
+    if (handlers.onFileProgress) socket.on('file_progress', handlers.onFileProgress);
+    if (handlers.onFileProgressComplete) socket.once('file_progress_complete', handlers.onFileProgressComplete);
+    if (handlers.onFileSummaryStart) socket.on('file_summary_start', handlers.onFileSummaryStart);
+    if (handlers.onFileSummaryChunk) socket.on('file_summary_chunk', handlers.onFileSummaryChunk);
+    if (handlers.onFileSummaryComplete) socket.on('file_summary_complete', handlers.onFileSummaryComplete);
 
     aiChunks.value = [];
     console.log("Sending prompt:", { thread, message, model });

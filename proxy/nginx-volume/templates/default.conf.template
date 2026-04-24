@@ -5,6 +5,7 @@ upstream api {
 # HTTP
 server {
     listen 80;
+    client_max_body_size 500m;
 
     location / {
         proxy_pass http://api;
@@ -19,5 +20,5 @@ server {
     }
 }
 
-# HTTPS (ports 443/444) is generated dynamically by 25-generate-ssl.sh
+# HTTPS (ports 443/444) is generated dynamically by 25-configure-https.sh
 # when SECURE=true and SSL certificates are present in /etc/nginx/ssl/

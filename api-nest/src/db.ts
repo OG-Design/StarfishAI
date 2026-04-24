@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3';
 import {Database as DatabaseType} from 'better-sqlite3';
 
-import { join } from "path";
+import { join, isAbsolute } from "path";
+import { readFileSync } from "fs";
 
 import { config } from 'dotenv';
 
@@ -15,12 +16,19 @@ export const dbPath=process.env.DB_PATH??"./starfish.db";
 console.log(dbPath);
 
 // create the db — use path as-is if absolute, otherwise resolve relative to cwd
-import { isAbsolute } from "path";
 const resolvedDbPath = isAbsolute(dbPath) ? dbPath : join(process.cwd(), dbPath);
 const db: DatabaseType = new Database(resolvedDbPath);
 
 // enable foreign key enforcement (SQLite defaults to OFF)
 db.pragma('foreign_keys = ON');
+
+// initialize schema if tables don't exist (e.g. fresh volume)
+const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='user'").get();
+if (!tableCheck) {
+  console.log('Initializing database schema...');
+  const schema = readFileSync(join(process.cwd(), 'starfish.db.sql'), 'utf-8');
+  db.exec(schema);
+}
 
 // migrate message_files to add ON DELETE CASCADE if missing
 const fkInfo = db.pragma('foreign_key_list(message_files)') as any[];

@@ -14,6 +14,7 @@ import { FilestorageService } from 'src/filestorage/filestorage.service'
 
 import { checkModelExistsOnGroup } from 'src/composables/checkModelExists';
 import { isCodeFile } from 'src/composables/isCodeFile';
+import { extractZipEntries, processExtractedFiles } from 'src/composables/extractFiles';
 
 import { Socket } from 'socket.io';
 import { Ollama } from 'ollama';
@@ -179,7 +180,13 @@ export class ChateventGateway {
           const parsed = JSON.parse(me.data);
           // Exclude thinking and system messages — Ollama only understands system/user/assistant roles
           if (parsed.role !== 'thinking' && parsed.role !== 'system') {
-            messages.push(parsed);
+            // Map file-summary to user role so Ollama can understand it as context
+            if (parsed.role === 'file-summary') {
+              const fileLabel = parsed.fileName ? `[File summary of "${parsed.fileName}"]\n` : '';
+              messages.push({ role: 'user', content: `${fileLabel}${parsed.content}` });
+            } else {
+              messages.push(parsed);
+            }
           }
         } catch (e) {
             console.error(e)
@@ -190,6 +197,18 @@ export class ChateventGateway {
     if (data.fileIds && data.fileIds.length > 0) {
       const imageBuffers: string[] = [];
       const textContextParts: string[] = [];
+      const summaryOnlyParts: string[] = []; // Only AI-generated summaries, not raw file content
+      const summaryFileNames: string[] = [];
+
+      // Ollama client needed for summarizing large files
+      const ollamaForSummary = new Ollama({ host: this.ollamaURL });
+      let filesProcessed = 0;
+      let totalFilesToProcess = data.fileIds.length;
+      console.log(`[FileProcessing] Starting processing of ${totalFilesToProcess} file(s)`);
+      client.emit('file_progress', { current: 0, total: totalFilesToProcess, fileName: 'Starting...' });
+
+      // Start a single file summary stream for all files
+      client.emit('file_summary_start', { fileName: 'Processing files...' });
 
       for (const fileId of data.fileIds) {
         const fileRecord: any = db.prepare('SELECT * FROM file WHERE idFile = ? AND user_idUser = ?').get(fileId, idUser);
@@ -197,28 +216,138 @@ export class ChateventGateway {
 
         try {
           const { buffer, mimetype } = this.fileStorageService.getUserFile(idUser, fileRecord.fileName);
+          const isZip = mimetype === 'application/zip' ||
+                        mimetype === 'application/x-zip-compressed' ||
+                        fileRecord.originalName?.endsWith('.zip');
 
-          if (mimetype?.startsWith('image/')) {
+          if (isZip) {
+            // Extract zip in memory and process each entry
+            const entries = extractZipEntries(buffer);
+            totalFilesToProcess += entries.length - 1; // replace the zip with its contents in the count
+            console.log(`[FileProcessing] Zip "${fileRecord.originalName}" contains ${entries.length} entries, total files now: ${totalFilesToProcess}`);
+            client.emit('file_progress', { current: filesProcessed, total: totalFilesToProcess, fileName: fileRecord.originalName });
+
+            summaryFileNames.push(fileRecord.originalName);
+
+            const zipSummaryParts: string[] = [];
+            const zipContextParts = await processExtractedFiles(
+              entries,
+              ollamaForSummary,
+              data.model.modelFullName,
+              (progress) => {
+                filesProcessed++;
+                console.log(`[FileProcessing] Zip entry ${filesProcessed}/${totalFilesToProcess}: "${progress.fileName}"`);
+                client.emit('file_progress', { current: filesProcessed, total: totalFilesToProcess, fileName: progress.fileName });
+              },
+              undefined, // abortSignal
+              (chunk) => {
+                client.emit('file_summary_chunk', chunk);
+              },
+              (fileName) => {
+                // individual file headers are streamed via onSummaryChunk
+              },
+              (fileName, summary) => {
+                zipSummaryParts.push(`**${fileName}**\n${summary}`);
+              },
+            );
+
+            summaryOnlyParts.push(...zipSummaryParts);
+            textContextParts.push(...zipContextParts);
+
+            // Attach images from the zip
+            for (const entry of entries) {
+              if (entry.isImage && entry.imageBase64) {
+                imageBuffers.push(entry.imageBase64);
+              }
+            }
+
+          } else if (mimetype?.startsWith('image/')) {
             // Vision-capable models: attach as base64 image
             imageBuffers.push(buffer.toString('base64'));
-
-          } else if (isCodeFile(mimetype, fileRecord.originalName)) {
-            // Text-based file: inject as readable context block
-            const text = buffer.toString('utf-8');
-            textContextParts.push(
-              `--- File: ${fileRecord.originalName} ---\n${text}\n--- End of file ---`
-            );
+            filesProcessed++;
+            console.log(`[FileProcessing] Image ${filesProcessed}/${totalFilesToProcess}: "${fileRecord.originalName}"`);
+            client.emit('file_progress', { current: filesProcessed, total: totalFilesToProcess, fileName: fileRecord.originalName });
 
           } else {
-            // Unknown / binary: inform the model the file exists but can't be read as text
-            textContextParts.push(
-              `--- File: ${fileRecord.originalName} (${mimetype ?? 'unknown type'}) ---\n[Binary file attached — content not readable as text]\n--- End of file ---`
-            );
+            // Text / code / binary file handling with 500-line limit
+            const text = buffer.toString('utf-8');
+            const lines = text.split('\n');
+            const isReadable = isCodeFile(mimetype, fileRecord.originalName) || mimetype?.startsWith('text/');
+
+            if (isReadable && lines.length > 500) {
+              console.log("Reading large file");
+              summaryFileNames.push(fileRecord.originalName);
+              // Large file: summarize via Ollama with streaming
+              client.emit('file_summary_chunk', `\n\n**📄 ${fileRecord.originalName}** (${lines.length} lines — summarized)\n\n`);
+              try {
+                const summaryChunks: string[] = [];
+                const stream = await ollamaForSummary.chat({
+                  model: data.model.modelFullName,
+                  messages: [
+                    { role: 'system', content: 'You are a detailed file summarizer. Analyze the file content thoroughly and provide:\n1. **Purpose**: What this file does and its role in the project.\n2. **Key structures**: Classes, interfaces, types, and their relationships.\n3. **Important functions/methods**: Name, parameters, return type, and what they do.\n4. **Code snippets**: Include important code snippets (function signatures, key logic, configurations) wrapped in fenced code blocks with the appropriate language.\n5. **Dependencies**: Notable imports, external libraries, or modules used.\n6. **Configuration & constants**: Any important config values, environment variables, or constants.\nBe thorough but organized. Preserve code snippets that are essential to understanding the file.' },
+                    { role: 'user', content: `Summarize this file "${fileRecord.originalName}":\n\n${text}` }
+                  ],
+                  stream: true,
+                });
+
+                for await (const chunk of stream) {
+                  const chunkText = chunk.message.content;
+                  if (chunkText) {
+                    summaryChunks.push(chunkText);
+                    client.emit('file_summary_chunk', chunkText);
+                  }
+                }
+
+                const fullSummary = summaryChunks.join('');
+                summaryOnlyParts.push(`**${fileRecord.originalName}**\n${fullSummary}`);
+                textContextParts.push(
+                  `--- File: ${fileRecord.originalName} (summarized from ${lines.length} lines) ---\n${fullSummary}\n--- End of file ---`
+                );
+
+              } catch (e) {
+                // Fallback: include truncated
+                textContextParts.push(
+                  `--- File: ${fileRecord.originalName} (${lines.length} lines — summarization failed, truncated) ---\n${lines.slice(0, 500).join('\n')}\n--- End of file ---`
+                );
+              }
+            } else if (isReadable) {
+              // Small text file: include as-is in context (no summary needed)
+              client.emit('file_summary_chunk', `\n\n**📄 ${fileRecord.originalName}** (${lines.length} lines — included in full)\n\n`);
+              textContextParts.push(
+                `--- File: ${fileRecord.originalName} ---\n${text}\n--- End of file ---`
+              );
+            } else {
+              // Unknown / binary
+              textContextParts.push(
+                `--- File: ${fileRecord.originalName} (${mimetype ?? 'unknown type'}) ---\n[Binary file attached — content not readable as text]\n--- End of file ---`
+              );
+            }
+            filesProcessed++;
+            console.log(`[FileProcessing] File ${filesProcessed}/${totalFilesToProcess}: "${fileRecord.originalName}"`);
+            client.emit('file_progress', { current: filesProcessed, total: totalFilesToProcess, fileName: fileRecord.originalName });
           }
         } catch (e) {
-          console.error('Failed to load file for id', fileId, e);
+          console.error('[FileProcessing] Failed to load file for id', fileId, e);
+          filesProcessed++;
+          client.emit('file_progress', { current: filesProcessed, total: totalFilesToProcess, fileName: fileRecord.originalName });
         }
       }
+
+      // Complete the single file summary stream
+      client.emit('file_summary_complete');
+
+      // Save only AI-generated summaries and filenames as a single message in the DB
+      if (summaryOnlyParts.length > 0) {
+        const combinedSummary = summaryOnlyParts.join('\n\n---\n\n');
+        const fileSummaryMessage = { role: 'file-summary', fileName: summaryFileNames.join(', '), content: combinedSummary };
+        db.prepare("INSERT INTO message (data, idThread) VALUES (?, ?)").run(JSON.stringify(fileSummaryMessage), data.thread);
+      }
+
+      // Signal that all file processing is done
+      console.log(`[FileProcessing] Complete — ${filesProcessed} file(s) processed`);
+      client.emit('file_progress_complete', { total: filesProcessed });
+
+      console.log()
 
       const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
       if (lastUserMsg) {
@@ -227,6 +356,7 @@ export class ChateventGateway {
         }
         if (textContextParts.length > 0) {
           lastUserMsg.content = `${lastUserMsg.content ?? ''}\n\n${textContextParts.join('\n\n')}`.trim();
+          console.log(`[FileProcessing] Attached ${textContextParts.length} context part(s) to user message (${lastUserMsg.content.length} chars total)`);
         }
       }
     }

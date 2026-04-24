@@ -1,8 +1,9 @@
 {
     "scripts": {
         "gen:env:win":"generateENV-windows.bat",
+        "gen:ssl:selfsigned":"node -e \"var p=require('path');require('child_process').execSync(process.platform==='win32'?'\\\"C:\\\\Program Files\\\\Git\\\\usr\\\\bin\\\\bash.exe\\\" '+p.join('proxy','nginx-volume','ssl','generate-certs.sh'):'bash '+p.join('proxy','nginx-volume','ssl','generate-certs.sh'),{stdio:'inherit',cwd:__dirname})\"",
         "sync:env": "sync.env.bat",
-        "docker:build:appimage": "docker image build --no-cache -f ./app-compose/Dockerfile -t starfishai-appimage .",
+        "docker:build:appimage": "npm run webapp:build && npm run api-nest:build && docker image build --no-cache -f ./app-compose/Dockerfile -t starfishai-appimage .",
         "docker:run:appimage": "docker run --rm -it starfishai-appimage sh",
         "docker:run:app-compose": "npm run sync:env && docker-compose -f ./app-compose/docker-compose.yml up --build",
         "docker:run:all": "npm run docker:build:appimage && docker-compose up -d",

@@ -75,6 +75,10 @@ const messages = ref<any[]>([]);
 const personality = ref<string>('');
 const isLoading = ref(false);
 
+// File processing progress state
+const fileProgress = ref<{ current: number; total: number; fileName: string } | null>(null);
+const isProcessingFiles = ref(false);
+
 const emit = defineEmits(['updateThreadTitle']);
 
 
@@ -138,9 +142,11 @@ async function getAllMessages() {
   for (let i = data.length - 1; i >= 0; i--) {
     if (data[i].role === 'thinking') { lastThinkingIdx = i; break; }
   }
-  messages.value = data.map((m: any, i: number) =>
-    m.role === 'thinking' ? { ...m, _open: i === lastThinkingIdx } : m
-  );
+  messages.value = data.map((m: any, i: number) => {
+    if (m.role === 'thinking') return { ...m, _open: i === lastThinkingIdx };
+    if (m.role === 'file-summary') return { ...m, _open: false, complete: true };
+    return m;
+  });
 
   const systemMessage = data.find((msg: any) => {
     return msg.role==='system'
@@ -203,6 +209,9 @@ async function handlePrompt() {
   // Create a placeholder for the thinking content (inserted into the list only when the first chunk arrives)
   let thinkingMessage: any = null;
 
+  // Create a placeholder for file summary (inserted when first chunk arrives)
+  let fileSummaryMessage: any = null;
+
   // Create a placeholder for the assistant's message
   let assistantMessage = { role: 'assistant', content: '', complete: false };
   messages.value.push(assistantMessage);
@@ -224,6 +233,12 @@ async function handlePrompt() {
       throw new Error('Model group id is missing. Re-select the model in Settings.');
     }
     const fileIds = uploadedFiles.map((f: any) => f.idFile);
+
+    // Show file processing indicator immediately if there are files
+    if (fileIds.length > 0) {
+      isProcessingFiles.value = true;
+      fileProgress.value = { current: 0, total: fileIds.length, fileName: 'Uploading...' };
+    }
 
     cleanupListeners = await sendPromptWithHandlers(
       props.idThread,
@@ -256,11 +271,44 @@ async function handlePrompt() {
         async onComplete() {
           assistantMessage.complete = true;
           isLoading.value = false;
+          isProcessingFiles.value = false;
+          fileProgress.value = null;
           cleanupListeners?.();
           // Re-fetch messages so every entry has its idMessage from the DB
           await getAllMessages();
         },
         onError: handleError,
+        onFileProgress(progress) {
+          console.log('[FileProgress] Received:', progress);
+          isProcessingFiles.value = true;
+          fileProgress.value = progress;
+        },
+        onFileProgressComplete() {
+          console.log('[FileProgress] Complete');
+          isProcessingFiles.value = false;
+          fileProgress.value = null;
+        },
+        onFileSummaryStart(info: { fileName: string }) {
+          console.log('[FileSummary] Start:', info.fileName);
+          fileSummaryMessage = { role: 'file-summary', content: '', complete: false, _open: true, fileName: info.fileName };
+          const assistantIdx = messages.value.indexOf(assistantMessage);
+          messages.value.splice(assistantIdx, 0, fileSummaryMessage);
+        },
+        onFileSummaryChunk(chunk: string) {
+          if (fileSummaryMessage) {
+            fileSummaryMessage.content += chunk;
+            messages.value = [...messages.value];
+            scrollToBottom();
+          }
+        },
+        onFileSummaryComplete() {
+          console.log('[FileSummary] Complete');
+          if (fileSummaryMessage) {
+            fileSummaryMessage.complete = true;
+            fileSummaryMessage._open = false;
+            messages.value = [...messages.value];
+          }
+        },
       }
     );
   } catch (err: any) {
@@ -521,6 +569,19 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
           </div>
         </li>
 
+        <!-- File summary block: collapsible, similar to thinking -->
+        <li v-else-if="message.role === 'file-summary'" class="thinking-block file-summary-block">
+          <div class="thinking-details" :class="{ open: message._open }">
+            <div class="thinking-summary file-summary-header" role="button" @click="toggleThinking(message)">
+              <span>File Summary{{ message.fileName ? ': ' + message.fileName : '' }}</span>
+              <span v-if="message.complete === false" class="thinking-indicator">...</span>
+            </div>
+            <div class="thinking-content-wrapper">
+              <div class="thinking-content markdown-content" v-html="md.render(message.content ?? '')"></div>
+            </div>
+          </div>
+        </li>
+
         <!-- System message (hidden) -->
         <li v-else-if="message.role === 'system'" style="display:none"></li>
 
@@ -564,6 +625,15 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
       <!-- Prints the latest message -->
       <!--<li v-if="currentMessage" class="message markdown-content" v-html="md.render(currentMessage)">
       </li>-->
+
+      <!-- File processing progress -->
+      <li v-if="isProcessingFiles && fileProgress" class="file-progress-container">
+        <div class="file-progress-spinner"></div>
+        <span class="file-progress-text">
+          Files processed: {{ fileProgress.current }} / {{ fileProgress.total }}
+          <span class="file-progress-name">{{ fileProgress.fileName }}</span>
+        </span>
+      </li>
 
     </ul>
     <div v-if="isLoading" class="loading-gif-container"><img class="loading-gif" src="/animation/LoadingDroplet.gif" alt="Loading..." srcset=""></div>
@@ -1048,6 +1118,12 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
   }
 }
 
+.file-summary-block {
+  .file-summary-header {
+    color: var(--key-1, #4078f2);
+  }
+}
+
 @keyframes thinking-dots {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
@@ -1323,6 +1399,51 @@ function handleUpdateSelectedModel(selected: CustomSelectType) {
     }
   }
 
+}
+
+.file-progress-container {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: calc(var(--space) / 2) var(--space);
+  background-color: var(--bg-2);
+  border-radius: var(--border-radius);
+  font-size: 0.85em;
+  color: var(--text-muted);
+  box-shadow: var(--shadow);
+  width: fit-content;
+  align-self: flex-start;
+}
+
+.file-progress-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid var(--bg-ac-1, #444);
+  border-top-color: var(--key-1, #4078f2);
+  border-radius: 50%;
+  animation: file-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes file-spin {
+  to { transform: rotate(360deg); }
+}
+
+.file-progress-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.file-progress-name {
+  opacity: 0.7;
+  font-size: 0.9em;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 </style>

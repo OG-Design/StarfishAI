@@ -482,7 +482,8 @@ h1 {
     position: static;
     width: 100%;
 
-    height: fit-content;
+    height: 100%;
+    overflow-y: scroll;
 
     background-color: var(--bg-1);
 

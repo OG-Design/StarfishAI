@@ -32,10 +32,10 @@ Starfish is an AI app that allows multiple users to use AI locally. You can chat
 
 ## 1. Install dependencies
 
-1. Navigate to [./api-nest/](./api-nest/).
-2. Type `npm install` to install dependencies.
-3. Navigate to [./webapp/](./webapp/).
-4. Type `npm install` to install dependencies.
+To install all dependencies type the command below
+```bash
+npm run install:all
+```
 
 ## 2. Generate the Database
 
@@ -52,22 +52,16 @@ cd ./api-nest
 # 2.
 sqlite3 starfish.db
 
-# 3.
+# 3. in sqlite3 cli
 .read "./starfish.db.sql"
 ```
 
-## 3. Generate the environment variables
+## 3. Build the project
 
-Use the scripts provided to generate the `.env` files.
+In project root run the build command
 
-[Windows](./generateENV-windows.bat)
 ```bash
-./generateENV-windows.bat
-```
-
-[Linux](./generateENV-linux.sh)
-```bash
-./generateENV-linux.sh
+npm run build
 ```
 
 ## 4 Install Docker
@@ -88,28 +82,11 @@ sudo systemctl enable docker
 
 ## 5. Run the project
 
-To run the project you have two main ways of doing it, using the script provided:
+To run the project in docker do:
+
 ```bash
-# Windows
-./run.bat
-```
-or run them seperately:
-```bash
-# WebApp
-cd ./webapp
-npm run dev
-
-# API
-cd ./api-nest
-npm run start:dev
-
-# Ollama
-cd ./ollama
-docker-compose up -d
-
-# Redis. Not implemented yet, but required to run.
-cd ./redis
-docker-compose up -d
+# This builds the docker image for webapp+api in app-compose and runs that & the compose file in the project root
+npm run docker:start:all
 ```
 
 ## api-nest
@@ -147,7 +124,11 @@ Access the app at `http://localhost`.
 
    Place `cert.pem` and `key.pem` in [`proxy/nginx-volume/ssl/`](./proxy/nginx-volume/ssl/). See the [SSL README](./proxy/nginx-volume/ssl/README.md) for generation instructions.
 
+
    Quick self-signed cert (Linux/macOS):
+
+
+
    ```bash
    cd proxy/nginx-volume/ssl
    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
