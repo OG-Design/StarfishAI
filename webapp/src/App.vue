@@ -142,6 +142,7 @@ function handleUpdateThreadsAvailable(payload: object = {empty: "empty"}) {
 
 
 const settingsIsOpen = ref(false);
+const currentUsername = ref('Profile');
 
 function handleOpenSettings() {
   console.log("Opening settings in parent.");
@@ -192,6 +193,7 @@ async function fetchUserGroup() {
     const groupsRes = await res.json()
 
     groups.value=groupsRes;
+    currentUsername.value = groupsRes?.[0]?.username || 'Profile';
 
 
     // check if stored locally
@@ -246,6 +248,7 @@ function toggleMenu() {
 
 function handleLogout() {
   authenticated.value=false
+  currentUsername.value = 'Profile';
 }
 
 let devMode = false;
@@ -313,7 +316,7 @@ const version = ref(pkg.build.productName + " " + pkg.version+" - " + location);
   <!-- Handles login -->
   <Login v-if="!authenticated" :authenticated="authenticated" @updateThreadsAvailable="handleUpdateThreadsAvailable"/>
 
-  <TopMenu @openSettings="handleOpenSettings" @openProfile="handleOpenProfile"/>
+  <TopMenu :username="currentUsername" @openSettings="handleOpenSettings" @openProfile="handleOpenProfile"/>
   <template v-if="settingsIsOpen" :key="settingsIsOpen">
     <Settings @updateModels="updateModels" @openSettings="handleOpenSettings" @updateSelectedGroup="handleUpdateSelectedGroup"/>
   </template>

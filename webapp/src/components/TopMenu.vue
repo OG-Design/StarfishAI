@@ -1,6 +1,13 @@
 <script setup>
 import { defineEmits } from 'vue';
 
+const props = defineProps({
+    username: {
+        type: String,
+        default: 'Profile'
+    }
+});
+
 const emit = defineEmits(["openSettings", "openProfile"]);
 
 function handleOpenSettings() {
@@ -17,7 +24,7 @@ function handleOpenProfile() {
 <template>
     <section id="controll-menu">
         <button id="settings-btn" @click="handleOpenSettings">Settings</button>
-        <button id="profile-btn" @click="handleOpenProfile">Profile</button>
+        <button id="profile-btn" @click="handleOpenProfile">{{ props.username || 'Profile' }}</button>
     </section>
 </template>
 <style lang="scss">
@@ -38,19 +45,24 @@ function handleOpenProfile() {
     gap: var(--space);
 
     button {
-        $size: 50px;
-        width: $size;
-        height: $size;
+        height: 50px;
         border-radius: 1000px;
+        padding: 0 14px;
     }
 
 }
 
 #settings-btn {
+    width: 50px;
     background-color: var(--key-1);
 }
 
 #profile-btn {
+    min-width: 70px;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     background-color: var(--key-2-bright);
 }
 
