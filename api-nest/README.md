@@ -20,7 +20,7 @@ This api handles all traffic from the frontend, it handles ollama's api with his
 # **Prerequisites & compatibility**
 
 ## Compatibility
-**Important note:** Virtualization is important, the project may not run without it (untested), make sure your system supports it. There may be work arounds to this, but they are not recommended due to performance issues. If your system doesn't support virtualization you may want to download ollama natively instead: [ollama](https://ollama.com/)
+**Important note:** Virtualization is important, the project may not run without it (untested), make sure your system supports it.
 
 Due to the previously mentioned importance of virtualization this may not run on certain chipsets like apple's `m1` chip.
 
@@ -51,6 +51,20 @@ $ npm install
 ### Using sqlite studio
 
 Run the content of this SQL script [starfish.db.sql](./starfish.db.sql) in `sqlite studio` or it's cli tools. Save it in the `../api-nest` folder.
+
+### Using sqlite3
+
+Navigate to api-nest and start sqlite3.
+
+```bash
+
+# ./api-nest
+sqlite3 starfish.db
+
+# In sqlite3 cli
+.read "starfish.db.sql"
+
+```
 
 ## Make the `.env` files
 
