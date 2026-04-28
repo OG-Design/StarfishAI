@@ -2,9 +2,12 @@
 set -e
 
 # This script runs during nginx container startup (after envsubst template processing).
-# It generates HTTPS server blocks only when SECURE=true AND SSL certificates exist.
+# It generates local HTTPS server blocks only when:
+#   - SECURE=true
+#   - USE_EXTERNAL_SSL!=true
+#   - SSL certificates exist
 
-if [ "$SECURE" = "true" ] && [ -f /etc/nginx/ssl/cert.pem ] && [ -f /etc/nginx/ssl/key.pem ]; then
+if [ "$SECURE" = "true" ] && [ "$USE_EXTERNAL_SSL" != "true" ] && [ -f /etc/nginx/ssl/cert.pem ] && [ -f /etc/nginx/ssl/key.pem ]; then
     cat > /etc/nginx/conf.d/ssl.conf << 'EOF'
 # Auto-generated HTTPS configuration (SECURE=true)
 
@@ -51,6 +54,8 @@ server {
 }
 EOF
     echo "25-generate-ssl.sh: SSL configuration generated (ports 443, 444)"
+elif [ "$SECURE" = "true" ] && [ "$USE_EXTERNAL_SSL" = "true" ]; then
+    echo "25-generate-ssl.sh: USE_EXTERNAL_SSL=true, skipping local SSL config (expecting external TLS termination)"
 else
-    echo "25-generate-ssl.sh: SSL not enabled (SECURE=${SECURE:-unset}) or certs not found, skipping"
+    echo "25-generate-ssl.sh: local SSL not enabled (SECURE=${SECURE:-unset}, USE_EXTERNAL_SSL=${USE_EXTERNAL_SSL:-unset}) or certs not found, skipping"
 fi
