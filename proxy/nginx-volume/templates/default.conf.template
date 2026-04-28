@@ -21,4 +21,5 @@ server {
 }
 
 # HTTPS (ports 443/444) is generated dynamically by 25-configure-https.sh
-# when SECURE=true and SSL certificates are present in /etc/nginx/ssl/
+# when SECURE=true, USE_EXTERNAL_SSL!=true, and SSL certificates are present
+# in /etc/nginx/ssl/
