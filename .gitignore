@@ -28,6 +28,8 @@ dist-ssr
 *.env.*
 !*.env.example
 !*.env.*.example
+!sync.env.sh
+!sync.env.bat
 
 *.db
 
