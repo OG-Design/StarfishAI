@@ -29,15 +29,44 @@ Starfish is an AI app that allows multiple users to use AI locally. You can chat
 
 # **Getting started**
 
+## Generate the env files
 
-## 1. Install dependencies
-
-To install all dependencies type the command below
 ```bash
-npm run install:all
+
+# windows
+npm run gen:env:win
+
+# linux
+npm run gen:env:linux
+
 ```
 
-## 2. Generate the Database
+## Change important values
+
+```bash
+# .env.secret
+- JWT_SECRET
+- SESSION_SECRET
+
+# .env
+- HOST (same as VITE_HOST)
+- VITE_HOST
+- ALLOWED_ORIGINS
+```
+
+## Sync .env files
+
+```bash
+
+# windows
+npm run sync:env:win
+
+# linux
+npm run sync:env:linux
+
+```
+
+<!-- ## Generate the Database
 
 Generate your Database using this script: [link](./api-nest/starfish.db.sql)
 
@@ -54,17 +83,9 @@ sqlite3 starfish.db
 
 # 3. in sqlite3 cli
 .read "./starfish.db.sql"
-```
+``` -->
 
-## 3. Build the project
-
-In project root run the build command
-
-```bash
-npm run build
-```
-
-## 4 Install Docker
+## Install Docker
 
 You can install docker here: [Link](https://www.docker.com/)
 
@@ -80,7 +101,7 @@ sudo systemctl enable docker
 ```
 
 
-## 5. Run the project
+## Run the project
 
 To run the project in docker do:
 

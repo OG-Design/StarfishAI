@@ -24,10 +24,6 @@ This api handles all traffic from the frontend, it handles ollama's api with his
 
 Due to the previously mentioned importance of virtualization this may not run on certain chipsets like apple's `m1` chip.
 
-## Ports needed
-- `5173` -> for the webapp, Will make a config file: W.I.P 22.01.26
-- `3000` -> for the API, Will make a config file: W.I.P 22.01.26
-
 ## Dependencies
 
 - node.js -> version: v22.15.0 - v.24.13.0 (LTS) [Link](https://nodejs.org/en)
@@ -45,42 +41,6 @@ install node dependencies
 ```bash
 $ npm install
 ```
-
-## Make the Database
-
-### Using sqlite studio
-
-Run the content of this SQL script [starfish.db.sql](./starfish.db.sql) in `sqlite studio` or it's cli tools. Save it in the `../api-nest` folder.
-
-### Using sqlite3
-
-Navigate to api-nest and start sqlite3.
-
-```bash
-
-# ./api-nest
-sqlite3 starfish.db
-
-# In sqlite3 cli
-.read "starfish.db.sql"
-
-```
-
-## Make the `.env` files
-
-### Run this file to generate the env files:
-- [Windows](../generateENV-windows.bat)
-- [Linux](../generateENV-linux.sh)
-
-### Change the content of all the generated files based on your environment:
-
-**Developement**
-- [`.env`](../.env)
-- [`.env.secret`](../.env.secret)
-
-**Production**
-- [`.env.production`](../.env.production)
-- [`.env.secret.production`](../.env.secret.production)
 
 ## Run the API
 By default this will run on port `3000` referenced as `API_PORT`, change this in [.env](../.env), or [.env.production](../.env.production) based on the environment. It also runs on `http://localhost`, so if you get cross origin problems try to change it in [.env](../.env) or [.env.production](../.env.production) referenced as `ALLOWED_ORIGINS`.
