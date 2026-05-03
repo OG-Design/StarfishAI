@@ -66,7 +66,7 @@ npm run sync:env:linux
 
 ```
 
-## Generate the Database
+<!-- ## Generate the Database
 
 Generate your Database using this script: [link](./api-nest/starfish.db.sql)
 
@@ -83,9 +83,9 @@ sqlite3 starfish.db
 
 # 3. in sqlite3 cli
 .read "./starfish.db.sql"
-```
+``` -->
 
-## 4 Install Docker
+## Install Docker
 
 You can install docker here: [Link](https://www.docker.com/)
 
@@ -101,7 +101,7 @@ sudo systemctl enable docker
 ```
 
 
-## 5. Run the project
+## Run the project
 
 To run the project in docker do:
 
