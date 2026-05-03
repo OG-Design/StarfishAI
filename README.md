@@ -127,8 +127,6 @@ Access the app at `http://localhost`.
 
    Quick self-signed cert (Linux/macOS):
 
-
-
    ```bash
    cd proxy/nginx-volume/ssl
    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
